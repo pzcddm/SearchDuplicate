@@ -27,6 +27,8 @@ class Wrapped_CW{
     int ith_hash;
     CW cw;
     
+    Wrapped_CW(){}
+
     Wrapped_CW(const int & _token_id, const int& _ith_hash, const int& _T, const int &_l, const int &_c, const int &_r):
         token_id(_token_id), ith_hash(_ith_hash),cw(_T, _l, _c, _r){}
 
@@ -38,5 +40,9 @@ class Wrapped_CW{
             return ith_hash < tmp.ith_hash;
         }
         return token_id < tmp.token_id;
+    }
+
+    void display(){
+         printf("token_id:%d, ith_hashs: %d\n", token_id, ith_hash);
     }
 };
