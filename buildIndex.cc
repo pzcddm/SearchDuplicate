@@ -15,7 +15,7 @@ int main() {
     loadWord2id(wiki_words_file_name, word2id);
     int wordNum = word2id.size(); // the number of tokens
     cout << wordNum << endl;
-    int k = 10; // the number of hash functions
+    int k = 100; // the number of hash functions
 
     IndexItem **indexArr;
     indexArr = new IndexItem *[k];
@@ -77,4 +77,5 @@ int main() {
     }
     outFile.close();
     
+    return 0;
 }

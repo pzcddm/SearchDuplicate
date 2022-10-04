@@ -33,18 +33,20 @@ public:
         assert(theta <= 1.0);
     }
 
-    // Todo
     vector<CW> getResult() {
+        // Timer on
+        auto timerOn = LogTime();
+
         vector<CW> res;
-        vector<int> minHashesToken;             // save the tokenid that has minHashValue with each hashfunction
-        map<int, vector<CW>> doc_groups;        // group CWs by their document id
+        vector<int> minHashesToken;      // save the tokenid that has minHashValue with each hashfunction
+        map<int, vector<CW>> doc_groups; // group CWs by their document id
 
         // get these K minHashes of the query sequence
         getKMinHash(minHashesToken);
-        
+
         // Group those compat window vectors by T (document id)
         GroupT(doc_groups, minHashesToken);
-    
+
         // Implement Find Subset algorithm to each group and filter those whose size is lower than ceil(theta*k)
         int thres = int(ceil(k * theta));
         for (auto const &gp : doc_groups) {
@@ -52,10 +54,11 @@ public:
             if (gp.second.size() < thres)
                 continue;
 
-            nearDupSearch(gp.second, thres, res); 
+            nearDupSearch(gp.second, thres, res);
             // Todo get the result of Subset algorithm
         }
 
+        printf("This query operation costs %f seconds\n", RepTime(timerOn));
         return res;
     }
 
@@ -83,16 +86,14 @@ private:
         // load the coresponding cw vectors of these K minHashes
         // and group them by document id
 
-        assert(minHashesToken.size() ==k);
+        assert(minHashesToken.size() == k);
         for (int i = 0; i < minHashesToken.size(); i++) {
-            
             int token_id = minHashesToken[i];
-            assert(token_id>=0 && token_id <wordNum);
-            IndexItem & indexItem = indexArr[i][token_id];
+            assert(token_id >= 0 && token_id < wordNum);
+            IndexItem &indexItem = indexArr[i][token_id];
             vector<CW> cw_vet;
-            indexItem.getCompatWindows("CompatWindows",cw_vet,token_id);
+            indexItem.getCompatWindows("CompatWindows", cw_vet, token_id);
 
-            
             // group them by their document id
             for (auto &cw : cw_vet) {
                 int doc_id = cw.T;
@@ -101,7 +102,7 @@ private:
                 } else {
                     vector<CW> &tmp_vet = groups[doc_id];
                     tmp_vet.push_back(cw);
-                    assert(groups[doc_id].size() > 0); //will delete (just to check)
+                    assert(groups[doc_id].size() > 0); // will delete (just to check)
                 }
             }
         }

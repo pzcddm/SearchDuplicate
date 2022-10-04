@@ -7,7 +7,7 @@
 
 using namespace std;
 int K = 16;
-int tau = 16;
+int tau = 1;
 double theta = 0.8;  
 int MY_NAN = -999;
 int INFTY = 0x7fffffff;
@@ -31,6 +31,19 @@ string ws2s(const wstring& wstr)
     using convert_typeX = codecvt_utf8<wchar_t>;
     wstring_convert<convert_typeX, wchar_t> converterX;
     return converterX.to_bytes(wstr);
+}
+
+
+// Turn on timer
+std::chrono::_V2::system_clock::time_point LogTime() {
+    return chrono::high_resolution_clock::now();
+}
+
+// Turn off timer
+double RepTime(const std::chrono::_V2::system_clock::time_point &start) {
+    auto stop = chrono::high_resolution_clock::now();
+    auto duration = chrono::duration_cast<chrono::microseconds>(stop - start);
+    return duration.count() / 1000000.0;
 }
 
 
@@ -105,7 +118,6 @@ void strToTokens(string &str, const string &delimiter, vector<string> &res, vect
 		str[i] = str[i] <= 0 || str[i] == '\n'? ' ': str[i];
 	}
     */
-
     char *inputStr = strdup(str.c_str());
     int wordNum = 0;
 	char *key = strtok(inputStr, delimiter.c_str());
@@ -124,7 +136,47 @@ void strToTokens(string &str, const string &delimiter, vector<string> &res, vect
     }
     delete []inputStr;
 }
-
+void splitWord(string str, vector<int> &words)
+{
+    string word = "";
+    for (auto x : str) 
+    {
+        if (x == ' ')
+        {
+            if (word != "") words.push_back(stoi(word));
+            word = "";
+        }
+        else {
+            word = word + x;
+        }
+    }
+    if (word != "") words.push_back(stoi(word));
+}
+void gptToken2int(const string &filename, vector<int> &doc, vector<int> &offsets){
+    // Read from file ...
+	ifstream datafile(filename, ios::binary);
+    datafile.seekg(0, std::ios_base::end);
+    int length = datafile.tellg();
+    string docstr(length + 1, '\0');
+    datafile.seekg(0);
+    datafile.read(&docstr[0], length);
+    splitWord(docstr, doc);
+    for (int i = 0; i < doc.size(); i++) offsets.push_back(i);
+    //cout << docstr << endl;
+}
+// Read from file and do preprocessing
+// 
+// Input parameter:
+//  1) filename: the file name
+//  2) stopwords: stopwords that don't need to be considered
+//
+// Output parameter: 
+//  1) doc: contains the word id (from word string => word id)
+//  2) ppos: contains peroid positions
+//  3) word2id: the mapping from word to id
+//  4) id2word: the mapping from id to word
+//  5) id2maxFreq: the mapping from id to maximum frequency
+//  6) id2mulId: if this word appears more than 1 time, it will have a unique mulId for each appearance
 
 //return a hash value for a vector
 size_t getVectorHash(const vector<int> &vec){
@@ -146,7 +198,41 @@ void generateSubSketch(vector<int> &sub_sketch, unordered_map<size_t, int> &buck
     }
 }
 
+// api for words
+void getWords(const vector<string> &files, vector<string> &words, const unordered_set<string> &stopWords){
+    int id_size = 0;
+    unordered_map<string, int> word2id;
+    for (auto &file: files){
+        // Read from file ...
+        ifstream datafile(file, ios::binary);
+        datafile.seekg(0, std::ios_base::end);
+        int length = datafile.tellg();
+        string docstr(length + 1, '\0');
+        datafile.seekg(0);
+        datafile.read(&docstr[0], length);
 
+        // Make the doc to tokens
+        const string delim = "\t\n\r\x0b\x0c !\"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~,.!?;";
+        vector<string> tokens;
+        vector<int> tokensOffsets;
+        
+        strToTokens(docstr, delim, tokens, tokensOffsets);
+        for (int i = 0; i < tokens.size(); i++){
+            string word = tokens[i];
+            if (stopWords.find(word) != stopWords.end())
+                continue;
+            // If a new word, add to word2id
+            if (word2id.find(word) == word2id.end())
+            {
+                word2id[word] = id_size;
+                id_size += 1;
+                words.emplace_back(word);
+            }
+        }
+    }
+    cout << "word2id size is: " << word2id.size() << endl;
+    cout << "words size is: " << words.size() << endl;
+}
 void writeWords(const string file_name, vector<string> &words){
     ofstream fout;
     fout.open(file_name, ios::out);
@@ -154,6 +240,18 @@ void writeWords(const string file_name, vector<string> &words){
         fout << word << endl;
     }
     fout.close();
+}
+void buildDic(string src_path, unordered_set<string> stopWords, string file_name = "words.txt"){
+    vector<string> files;
+    vector<string> words;
+    getFiles(src_path, files);
+    /*
+    for (int i = 0; i < files.size(); i++){
+        cout << "current file is: " << files[i] << endl;
+    }
+    */
+    getWords(files, words, stopWords);
+    writeWords(file_name , words);
 }
 void loadWord2id(string file_name, unordered_map<string, int> &word2id){
     ifstream file(file_name, ios::in);
@@ -191,7 +289,6 @@ void getUnion(const vector<int> &v1, const vector<int> &v2, vector<int> &ret){
        ret.push_back(item);
     }
 }
-
 
 //check whether one file exists
 bool is_file_exist(const string &fileName)
@@ -293,7 +390,7 @@ void getTokensByStr(string &str, vector<string> &res){
     }
     delete []inputStr;
 }
-float getJac(docInfo &d1, docInfo &d2, vector<string> &docs){
+float getJacStrDoc(docInfo &d1, docInfo &d2, vector<string> &docs){
     int d1_id = d1.this_id;
     int d1_off = d1.this_offset;
     int d1_len = d1.this_length;
@@ -321,7 +418,30 @@ float getJac(docInfo &d1, docInfo &d2, vector<string> &docs){
         }
     }
     return (inter_words + 0.0) / (t1_set.size() + t2_set.size() - inter_words);
-
+}
+float getJacByInt(docInfo &d1, docInfo &d2, vector<vector<int>> &docs){
+    int d1_id = d1.this_id;
+    int d1_off = d1.this_offset;
+    int d1_len = d1.this_length;
+    int d2_id = d2.this_id;
+    int d2_off = d2.this_offset;
+    int d2_len = d2.this_length;
+    
+    unordered_set<int> t1_set;
+    unordered_set<int> t2_set;
+    for (int i = 0; i < d1_len; i++){
+        t1_set.insert(docs[d1_id][d1_off + i]);
+    }
+    for (int i = 0; i < d2_len; i++){
+        t2_set.insert(docs[d2_id][d2_off + i]);
+    }
+    int inter_words = 0;
+    for (auto &w: t1_set){
+        if (t2_set.find(w) != t2_set.end()){
+            inter_words++;
+        }
+    }
+    return (inter_words + 0.0) / (t1_set.size() + t2_set.size() - inter_words);
 }
 //with period postion version copied from github project RangeAllign first commit
 void SketchGeneration(vector<CompositeWindow> &res_cws, const vector<int> &doc, const vector<int> &ppos, const vector<pair<int, int>> &hf)
@@ -544,87 +664,11 @@ void SketchGeneration(vector<CompositeWindow> &res_cws, const vector<int> &doc, 
     }
 }
 
-void PreSketch(const vector<int> &doc, const vector<int> &ppos, vector<pair<int, int>> &words_hash_pos, vector<Node> &occurrences, vector<Node> &neighbors, const vector<pair<int, int>> &hf)
-{
-    for (int word_pos = 0; word_pos < doc.size(); word_pos++)
-    {
-        words_hash_pos.emplace_back(hval(hf, doc[word_pos]), word_pos);
-    }
 
-    // first sort by hash value and second by position
-    sort(words_hash_pos.begin(), words_hash_pos.end(), [](const pair<int, int> &p1, const pair<int, int> &p2) {
-        if (p1.first < p2.first)
-            return true;
-        else if (p1.first > p2.first)
-            return false;
-        else
-            return p1.second < p2.second;
-    });
-
-    // build the occurrence table, one double linked list
-    int prev_hv = words_hash_pos.front().first + 1;
-    int prev_pos = -1;
-    for (auto it = words_hash_pos.begin(); it != words_hash_pos.end(); ++it)
-    {
-        int hv = it->first;
-        int pos = it->second;
-        // cout << "pos: " << pos << " hash " << hv << endl;
-        if (hv == prev_hv)
-        {
-            occurrences[pos].prev = prev_pos;
-            occurrences[prev_pos].next = pos;
-        } 
-        else
-        {   
-            if (prev_pos != -1)
-                occurrences[prev_pos].next = INFTY;  
-
-            prev_hv = hv;
-            occurrences[pos].prev = INFTY_NEG;
-        }
-        prev_pos = pos;
-    }
-    occurrences[prev_pos].next = INFTY; 
-
-    // maintain the skip list using double linked list trick
-    int doc_size = doc.size();
-    vector<Node> linkedlist;
-
-    Node HEAD(MY_NAN, 0);
-    Node TAIL(doc_size - 1, MY_NAN);
-    int HEAD_ID = -1;
-    int TAIL_ID = doc_size;
-
-    for (int word_pos = 0; word_pos < doc.size(); word_pos++)
-        linkedlist.emplace_back(word_pos - 1, word_pos + 1);
-
-    // keep the neighbors when visiting
-    
-    for (auto rit = words_hash_pos.rbegin(); rit != words_hash_pos.rend(); ++rit)
-    {
-        int pos = rit->second;
-        // first record the two neighbors of pos in current linked list
-        neighbors[pos].next = linkedlist[pos].next;
-        neighbors[pos].prev = linkedlist[pos].prev;
-
-        // next update the linked list by removing pos
-        int next = linkedlist[pos].next;
-        int prev = linkedlist[pos].prev;
-
-        if (next != TAIL_ID)
-            linkedlist[next].prev = prev;
-        else
-            TAIL.prev = prev;
-
-        if (prev != HEAD_ID)
-            linkedlist[prev].next = next;
-        else
-            HEAD.next = next;
-    }
-}
 //usable getSkecth interface
 void getSketch(int pos, const vector<int> &doc, vector<Node> &occurrences, vector<Node> &neighbors,  vector<Node> &skiplist, Node &SKIP_TAIL, vector<Node> &D, const vector<int> &ppos, const vector<pair<int, int>> &hf, vector<CompositeWindow> &res_cws){
     // first insert into the skip list
+    cout << "line 990 in util.hpp execute getSketch function here" << endl;
     int HEAD_ID = -1;
     int TAIL_ID = doc.size();
     int next = neighbors[pos].next;
@@ -709,6 +753,7 @@ void getSketch(int pos, const vector<int> &doc, vector<Node> &occurrences, vecto
                 int ll = skiplist[cy].prev + 1;
                 int lr = cy;
                 int rr = cx - 1;
+                
                 int index = 0;
                 int left_l = 0;
                 int right_r = 0;
@@ -719,6 +764,7 @@ void getSketch(int pos, const vector<int> &doc, vector<Node> &occurrences, vecto
                     }
                     index++;
                 }
+                
                 int idx = HEAD_REF;
                 vector<int> positions;
                 vector<int> sketch;
@@ -737,8 +783,9 @@ void getSketch(int pos, const vector<int> &doc, vector<Node> &occurrences, vecto
                     }
                     index++;
                 }
-                index = 0;
-                if (index != ppos.size()){
+                index = -1;
+                cout << "tau is :" << tau << endl;
+                if (true){
                     if ((rl - cy) >= tau){
                         //res_cws.emplace_back(left_l, cy, rl, right_r);
                         res_cws.emplace_back(skiplist[cy].prev + 1, cy, rl, cx - 1);
@@ -746,6 +793,7 @@ void getSketch(int pos, const vector<int> &doc, vector<Node> &occurrences, vecto
                         for (int i = 0; i < K; i++){
                             res_cws.back().positions.push_back(positions[i]);
                             res_cws.back().sketch.push_back(sketch[i]);
+                            cout << "generate sketch here" << endl;
                         }
                     }
                 }
@@ -889,128 +937,7 @@ void getSketch(vector<int> offset, int docid, bool getRet, int pos, const vector
 }
 */
 
-//currently used getSkecth interface
-//bool value getRet : if it is False, just insert value into the skiplist
-void getSketch(vector<int> offset, int docid, bool getRet, int pos, const vector<int> &doc, vector<Node> &occurrences, vector<Node> &neighbors,  vector<Node> &skiplist, Node &SKIP_TAIL, vector<Node> &D, const vector<int> &ppos, const vector<pair<int, int>> &hf, vector<CompactWindow> &cws){
-    // first insert into the skip list
-    int HEAD_ID = -1;
-    int TAIL_ID = doc.size();
-    int next = neighbors[pos].next;
-    int prev = neighbors[pos].prev;
-    int max_hash_value = hval(hf, doc[pos]);
-    skiplist[pos].next = next;
-    skiplist[pos].prev = prev;
 
-    if (next != TAIL_ID)
-        skiplist[next].prev = pos;
-    else
-        SKIP_TAIL.prev = pos;
-
-    if (prev != HEAD_ID)
-        skiplist[prev].next = pos;
-    /*
-    else
-        SKIP_HEAD.next = pos;
-    */
-    if (not getRet) return ;
-    // next generate sketches
-    int x = pos;
-    vector<int> L;
-    while (x != TAIL_ID && L.size() < K)
-    {
-        x = skiplist[x].next;
-        if (x == TAIL_ID || occurrences[x].prev < pos)
-            L.push_back(x);
-    }
-
-    for (auto rit = L.rbegin(); rit != L.rend(); ++rit)
-    {
-        int cx = *rit;
-        int cy;
-        if (cx != TAIL_ID)
-            cy = skiplist[cx].prev;
-        else
-            cy = SKIP_TAIL.prev;
-
-        int D_size = 0;
-        int HEAD_REF = MY_NAN;
-
-        while (cy != HEAD_ID && D_size <= K && occurrences[cy].next != pos)
-        {
-            if (cy == pos || occurrences[cy].next > cx)
-            {
-                D[cy].next = HEAD_REF;
-                D[cy].prev = MY_NAN;
-                if (HEAD_REF != MY_NAN)
-                    D[HEAD_REF].prev = cy;
-                HEAD_REF = cy;
-                D_size += 1;
-            }
-            else if (occurrences[cy].next == cx)
-                break;
-            else if (occurrences[cy].next < cx)
-            {
-                int del = occurrences[cy].next;
-                if (HEAD_REF == del)
-                    HEAD_REF = D[del].next;
-
-                if (D[del].next != MY_NAN)
-                {
-                    int del_next = D[del].next;
-                    D[del_next].prev = D[del].prev;
-                }
-
-                if (D[del].prev != MY_NAN)
-                {
-                    int del_prev = D[del].prev;
-                    D[del_prev].next = D[del].next;
-                }
-
-                D[cy].next = HEAD_REF;
-                D[cy].prev = MY_NAN;
-                if (HEAD_REF != MY_NAN)
-                    D[HEAD_REF].prev = cy;
-                HEAD_REF = cy;
-            }
-
-            if (D_size == K)
-            {              
-                int ll = skiplist[cy].prev + 1;
-                int lr = cy;
-                int rr = cx - 1;
-                int index = 0;
-                int left_l = 0;
-                int right_r = 0;
-                int idx = HEAD_REF;
-                vector<int> positions;
-                vector<int> sketch;
-                int rl = 0;
-                while (idx != MY_NAN)
-                {   
-                    positions.push_back(idx);
-                    sketch.push_back(hval(hf, doc[idx]));
-                    rl = idx;
-                    idx = D[idx].next;
-                }
-    
-                index = 0;
-                if (index != ppos.size()){
-                    if ((rl - cy) >= tau){
-                        //res_cws.emplace_back(left_l, cy, rl, right_r);
-                        cws.emplace_back(offset[skiplist[cy].prev + 1], offset[cy], offset[rl], offset[cx - 1]);
-                        //sort(sketch.begin(), sketch.end());
-                        cws.back().max_hv = max_hash_value;
-                        cws.back().doc_index = docid;
-                        for (int i = 0; i < sketch.size(); i++){
-                            cws.back().sketch.push_back(sketch[i]);
-                        }
-                    }
-                }
-            }
-            cy = skiplist[cy].prev;
-        }
-    }
-}
 int getDiff(const vector<int> &a, const vector<int> &b){
     int diff = 0;
     unordered_set<int> set_a;
@@ -1260,22 +1187,7 @@ void savePairRet(vector<pair<docInfo, docInfo>> &pair_ret, string file_name = "p
     }
     fout.close();
 }
-void splitWord(string str, vector<int> &words)
-{
-    string word = "";
-    for (auto x : str) 
-    {
-        if (x == ' ')
-        {
-            if (word != "") words.push_back(stoi(word));
-            word = "";
-        }
-        else {
-            word = word + x;
-        }
-    }
-    if (word != "") words.push_back(stoi(word));
-}
+
 void loadVector(vector<vector<docInfo>> &values, string file_name = "values.txt"){
     ifstream fin;
     fin.open(file_name, ios::in);
@@ -1429,9 +1341,11 @@ void refinePairRet(vector<string> &docs, vector<docInfo> &temp_to_refine_ret, ve
         for (int j = i+1; j < temp_to_refine_ret.size(); j++){
             docInfo dj = temp_to_refine_ret[j];
             s_ext = chrono::high_resolution_clock::now();
-            //bool flag = isSame(di, dj, docs);
+            bool flag = isSame(di, dj, docs);
+            /*
             bool flag = true;
             if (getJac(di, dj, docs) < theta) flag = false;
+            */
             e_ext = chrono::high_resolution_clock::now();
             dur_ext += chrono::duration_cast<chrono::microseconds>(e_ext - s_ext);
             if (!flag) continue;
@@ -1474,7 +1388,7 @@ void getRet(vector<CompactWindow> &cws, vector<size_t> &keys, vector<vector<docI
         vector<docInfo> temp;
         if (item.second.size() >= 2){
             for (auto &index: item.second){
-                temp.emplace_back(cws[index].doc_index, cws[index].beg_range.r, cws[index].end_range.l - cws[index].beg_range.r);
+                temp.emplace_back(cws[index].doc_index, cws[index].beg_range.r, cws[index].end_range.l - cws[index].beg_range.r + 1);
             }
             keys.push_back(item.first);
             ret.push_back(temp);
@@ -1597,39 +1511,39 @@ void Paint(vector<g_node> &nodes){
     }
     //printPaintInfo(nodes);
 }
-bool isInRet(int pos1, int pos2, vector<tuple<int, int, int, int>> &ret){
+bool isInRet(int pos1, int pos2, vector<tuple<int, int, int, int>> &ret, int len){
     for (auto &item: ret){
         int s = get<0>(item);
         int l = get<1>(item);
         int s2 = get<2>(item);
         int l2 = get<3>(item);
-        if (s <= pos1 && pos1 + 100 - 1 <= s + l - 1 && s2 <= pos2 && pos2 + 100 - 1 <= s2 + l2 - 1) return true;
+        if (s <= pos1 && pos1 + len - 1 <= s + l - 1 && s2 <= pos2 && pos2 + len - 1 <= s2 + l2 - 1) return true;
     }
     return false;
 }
-void buildAllSuffix(const vector<string> &all_text, unordered_map<size_t, vector<pair<int, int>>> &um){
+void buildAllSuffix(const vector<string> &all_text, unordered_map<size_t, vector<pair<int, int>>> &um, int len){
     hash<string> hasher;
     int index = 0;
     for (auto &text: all_text){
-        for (int i = 0; i < text.size() - 99; i++){
-            string substr = text.substr(i, 100);
+        for (int i = 0; i < text.size() - len + 1; i++){
+            string substr = text.substr(i, len);
             um[hasher(substr)].emplace_back(index, i);
         }
         index++;
     }
 }
-void searchInAll(int &doc_index, vector<pair<int, int>> &range, const vector<string> &all_text, unordered_map<size_t, vector<pair<int, int>>> &um, vector<tuple<int, int, int, int>> &ret){
+void searchInAll(int &doc_index, vector<pair<int, int>> &range, const vector<string> &all_text, unordered_map<size_t, vector<pair<int, int>>> &um, vector<tuple<int, int, int, int>> &ret, int length){
     hash<string> hasher;
     string text = all_text[doc_index];
-    for (int i = 0; i < text.size() - 99; i++){
-        string substr = text.substr(i, 100);
+    for (int i = 0; i < text.size() - length + 1; i++){
+        string substr = text.substr(i, length);
         size_t hash = hasher(substr);
         for (auto &p: um[hash]){
             int di = p.first;
             int pos = p.second;
             if (di <= doc_index) continue;
-            if (isInRet(i + range[doc_index].first, pos + range[di].first, ret)) continue;
-            int len = 100;
+            if (isInRet(i + range[doc_index].first, pos + range[di].first, ret, length)) continue;
+            int len = length;
             while (i + len < text.size() && pos + len < all_text[di].size() && text[i + len] == all_text[di][pos + len] ) len++;
             tuple<int, int, int, int> t_ret;
             t_ret = make_tuple(i + range[doc_index].first, len, pos + range[di].first, len);
@@ -1644,7 +1558,7 @@ void searchBySubstr(const string &text, int start, const string &ori_text, int o
         size_t hash = hasher(substr);
         if (sa.str_to_index.find(hash) == sa.str_to_index.end()) continue;
         for (auto &pos: sa.str_to_index[hash]){
-            if (isInRet(i+start, pos+ori_start, ret)) continue;
+            if (isInRet(i+start, pos+ori_start, ret, 100)) continue;
             int len = 100;
             while (i + len < text.size() && pos + len < ori_text.size() && text[i+len] == ori_text[pos + len]){
                 len++;
@@ -1660,7 +1574,7 @@ void searchSuffix(const string &text, int start, const string &ori_text, int ori
         char c = text[i];
         if (sa.char_to_index.find(c) == sa.char_to_index.end()) continue;
         for (auto &pos: sa.char_to_index[c]){
-            if (isInRet(i+start, pos+ori_start, ret)) continue;
+            if (isInRet(i+start, pos+ori_start, ret, 100)) continue;
             string p1 = text.substr(i, 100);
             string p2 = ori_text.substr(pos, 100);
             if (p1 == p2){
@@ -1672,19 +1586,6 @@ void searchSuffix(const string &text, int start, const string &ori_text, int ori
                 t_ret = make_tuple(start + i, len, pos + ori_start, len);
                 ret.push_back(t_ret);
             }
-        }
-    }
-}
-void loadGoogleRet(const string &file_name, vector<pair<int, int>> &range){
-    ifstream fin;
-    fin.open(file_name, ios::in);
-    string all_info;
-    while (getline(fin, all_info)){
-        //cout << all_info << endl;
-        if ('0' <=all_info[0] && all_info[0] <= '9'){
-            vector<int> words;
-            splitWord(all_info, words);
-            range.push_back(make_pair(words[0], words[1]));
         }
     }
 }

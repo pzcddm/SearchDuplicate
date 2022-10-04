@@ -30,7 +30,7 @@ void prepareGlobalVariables(int k){
     wordNum = word2id.size(); // the number of tokens
     cout << "total token amount: "<<wordNum << endl;
     // 写死, 用seed为0的随机种子生成的k个hash function
-    unsigned int seed = 0;
+    unsigned int seed = 0;  
     for (int i = 0; i < k; i++) generateHashFunc(seed, hashFunctions);
 }
 
@@ -54,26 +54,32 @@ void loadIndexItem(int k, string index_file){
 
 
 int main(){
-    int k = 10; // the number of hash functions
+    int max_k = 100; // the maximum number of hash functions
+
+    int k = 40;
     string query_seq = "was a research scientist working for the U.S. Department of Agriculture, and his mother, Edwina Sunny Lynch (née Sundholm; 1919–2004), was an English language tutor. ";
     float theta = 0.9;
     
-    prepareGlobalVariables(k);
+    prepareGlobalVariables(max_k);
     // load the IndexItem
-    loadIndexItem(k, "indexFile");
+    loadIndexItem(max_k, "indexFile");
 
     // Create query
     Query query(query_seq, theta, k);
     
-    printf("指针（地址）的值为：OX%p\n",indexArr);
-    
     vector<CW> duplicateCWs = query.getResult();
+    
+    // read words from source folder
+    // string src_path = "./py_script/1k_dir/";
+    string src_path = "./dataset/10k_byte/";
+    string file_name = "10k.bytes";
+    vector<string> files; // store file_path of each document in the given folder
+    loadFilesNameByBytes(file_name,src_path, files);
 
+    // getFiles(src_path, files);
     for(auto const & cw : duplicateCWs){
+        cout<<"Document name: "<< files[cw.T]<<endl;
         cw.display();
     }
-
-    
-    
 
 }

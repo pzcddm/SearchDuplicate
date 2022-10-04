@@ -51,7 +51,7 @@ void lineSweep(vector<Point> &points, const int &thres, vector<pair<int, int>> &
             if (intersection_st != -1 && ids.size() == thres) {
                 intersection_ed = points[i].pos;
 
-                cout << "intersection_st_2d: " << intersection_st << " ed: " << intersection_ed << endl;
+                // cout << "intersection_st_2d: " << intersection_st << " ed: " << intersection_ed << endl;
                 res_intervals.push_back(make_pair(intersection_st, intersection_ed));
 
                 // clear intersection_st
@@ -66,7 +66,7 @@ void lineSweep(vector<Point> &points, const int &thres, vector<pair<int, int>> &
             assert(ids.size() >= thres);
             intersection_ed = points[i].pos;
 
-            cout << "intersection_st_2d: " << intersection_st << " ed: " << intersection_ed << endl;
+            // cout << "intersection_st_2d: " << intersection_st << " ed: " << intersection_ed << endl;
             res_intervals.push_back(make_pair(intersection_st, intersection_ed));
         }
     }
@@ -99,7 +99,7 @@ void nearDupSearch(const vector<CW> &cw_vet, const int thres, vector<CW> &res) {
     // Get the points from the 1D interval of these compat windows
     vector<Point> points(cw_vet.size() * 2);
     int doc_id = cw_vet[0].T;
-    cout << "Finding Near Duplicate in this doc_id : "<<doc_id<<endl;
+   //  cout << "Finding Near Duplicate in this doc_id : "<<doc_id<<endl;
     
     for (int i = 0; i < cw_vet.size(); i++) {
         points[i << 1] = Point(cw_vet[i].l, 0, i);
@@ -132,7 +132,7 @@ void nearDupSearch(const vector<CW> &cw_vet, const int thres, vector<CW> &res) {
             if (intersection_st != -1 && ids.size() == thres) {
                 intersection_ed = points[i].pos;
 
-                cout << "intersection_st: " << intersection_st << " ed: " << intersection_ed << endl;
+                // cout << "intersection_st: " << intersection_st << " ed: " << intersection_ed << endl;
                 // Use LineSweepAlgo to find intersected range in [c,r]s
                 lineSweepHelper(cw_vet, doc_id, ids, intersection_st, thres, res);
 
@@ -148,7 +148,7 @@ void nearDupSearch(const vector<CW> &cw_vet, const int thres, vector<CW> &res) {
             assert(ids.size() >= thres);
             intersection_ed = points[i].pos;
 
-            cout << "intersection_st: " << intersection_st << " ed: " << intersection_ed << endl;
+            // cout << "intersection_st: " << intersection_st << " ed: " << intersection_ed << endl;
             // Implement line Sweep Algo in second dimension(those corresponding [c,r])
             lineSweepHelper(cw_vet, doc_id, ids, intersection_st, thres, res);
         }

@@ -17,7 +17,7 @@ public:
 
     void display() const
     {
-        printf("(%d, %d, %d, %d)\n", l, r, c, T);
+        printf("(document id: %d, l: %d, c: %d, r: %d)\n", T, l, c, r);
     }
 };
 
