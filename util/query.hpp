@@ -46,18 +46,22 @@ public:
 
         // Group those compat window vectors by T (document id)
         GroupT(doc_groups, minHashesToken);
-
+        int filtered_groupNum = 0;
         // Implement Find Subset algorithm to each group and filter those whose size is lower than ceil(theta*k)
         int thres = int(ceil(k * theta));
+
+
         for (auto const &gp : doc_groups) {
             // filter each group's size
             if (gp.second.size() < thres)
                 continue;
 
+            filtered_groupNum++;
+            // Implement LineSweep Algorithm to find the intersection of intervals and get the result
             nearDupSearch(gp.second, thres, res);
-            // Todo get the result of Subset algorithm
         }
 
+        printf("Filtered Groups Amount: %d\n",filtered_groupNum);
         printf("This query operation costs %f seconds\n", RepTime(timerOn));
         return res;
     }
@@ -74,7 +78,6 @@ private:
             for (int j = 0; j < seqTokenized.size(); j++) {
                 hashValues[j] = hval(hashFunctions, seqTokenized[j], i);
             }
-
             // Get minHash of current hashfunction
             int minValuePos = min_element(hashValues.begin(), hashValues.end()) - hashValues.begin();
             minHashesToken.push_back(seqTokenized[minValuePos]);
@@ -106,5 +109,7 @@ private:
                 }
             }
         }
+
+        printf("Groups Amount(Documents that minhashes corresponde): %lu\n",groups.size());
     }
 };

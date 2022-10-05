@@ -9,6 +9,7 @@
 
 using namespace std;
 
+
 struct Point {
     int pos;   // position of the start point or end point
     bool flag; // start point(false) or end point(1)
@@ -99,8 +100,8 @@ void nearDupSearch(const vector<CW> &cw_vet, const int thres, vector<CW> &res) {
     // Get the points from the 1D interval of these compat windows
     vector<Point> points(cw_vet.size() * 2);
     int doc_id = cw_vet[0].T;
-   //  cout << "Finding Near Duplicate in this doc_id : "<<doc_id<<endl;
-    
+    //  cout << "Finding Near Duplicate in this doc_id : "<<doc_id<<endl;
+
     for (int i = 0; i < cw_vet.size(); i++) {
         points[i << 1] = Point(cw_vet[i].l, 0, i);
         points[i << 1 | 1] = Point(cw_vet[i].c, 1, i);

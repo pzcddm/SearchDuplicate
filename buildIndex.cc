@@ -36,11 +36,13 @@ int main() {
     unsigned long long offset = 0;
 
     printf("wrappedCW的字节数量为%lu\n", sizeof(tmp_wrappedCW));
+    unsigned long long compat_windows_num = 0;
     while (inFile.read((char *)&tmp_wrappedCW, sizeof(tmp_wrappedCW))) { //一直读到文件结束
+        
         int token_id = tmp_wrappedCW.token_id;
         int ith_hash = tmp_wrappedCW.ith_hash;
 
-        assert(token_id < wordNum);
+        assert(token_id>=0 && token_id < wordNum);
         assert(ith_hash < k);
         // 还没碰到过这个IndexItem时
         if (indexArr[ith_hash][token_id].windowsNum == -1) {
@@ -50,12 +52,20 @@ int main() {
             indexArr[ith_hash][token_id].windowsNum++;
         }
 
+        if(indexArr[ith_hash][token_id].offset == 1808608800ULL){
+            tmp_wrappedCW.display();
+            cout<<indexArr[ith_hash][token_id].offset<<" "<<indexArr[ith_hash][token_id].windowsNum<<endl;
+        }
+
+        if(indexArr[ith_hash][token_id].windowsNum == 3193){
+            compat_windows_num++;
+        }
         // increase offset
-        offset += sizeof(tmp_wrappedCW);
+        offset = offset + sizeof(tmp_wrappedCW);
     }
 
     cout << "offset: " << offset << endl;
-
+    cout<< "compat windows num"<< compat_windows_num<<endl;
     // //display some IndexItem for debug
     // for(int i = 0;i<wordNum;i++){
     //     if(indexArr[0][i].windowsNum != -1){
@@ -70,7 +80,7 @@ int main() {
     string index_file = "indexFile";
 
     ofstream outFile(index_file, ios::out | ios::binary);
-    for (int i = 0; i < k; i++) {
+     for (int i = 0; i < k; i++) {
         for (int j = 0; j < wordNum; j++) {
             outFile.write((char *)&indexArr[i][j], sizeof(IndexItem));
         }

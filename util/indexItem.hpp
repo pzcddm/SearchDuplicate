@@ -6,7 +6,7 @@ using namespace std;
 class IndexItem {
 public:
     int windowsNum = -1; // how many windows in that list of
-    unsigned long offset = 0;
+    unsigned long long offset = 0;
 
     IndexItem() {
         windowsNum = -1;
@@ -14,7 +14,7 @@ public:
     }
     
     void display() {
-        printf("offset:%lu, windowsNUm: %d\n", offset, windowsNum);
+        printf("offset:%llu, windowsNUm: %d\n", offset, windowsNum);
     }
 
     void getCompatWindows(string cw_files, vector<CW> & res_cws, int token_id){
@@ -30,8 +30,15 @@ public:
             inFile.read((char *)&tmp_wrappedCW, sizeof(tmp_wrappedCW));
 
             //check if token_id matches the id user wants
+            if(token_id != tmp_wrappedCW.token_id)
+            {   
+                display();
+                printf("offset: %llu token_id: %d try tokenid: %d\n",offset, token_id,tmp_wrappedCW.token_id);
+                tmp_wrappedCW.display();
+            }
             assert(token_id == tmp_wrappedCW.token_id);
             res_cws.push_back(tmp_wrappedCW.cw);
         }
+        inFile.close();
     }
 };

@@ -4,8 +4,8 @@
 #include <iostream>
 #include <map>
 
-#include "util/nearDupSearch.hpp"
-#include "util/cw.hpp"
+#include "../util/nearDupSearch.hpp"
+#include "../util/cw.hpp"
 
 using namespace std;
 

@@ -29,9 +29,8 @@ void prepareGlobalVariables(int k){
     loadWord2id(wiki_words_file_name, word2id);
     wordNum = word2id.size(); // the number of tokens
     cout << "total token amount: "<<wordNum << endl;
-    // 写死, 用seed为0的随机种子生成的k个hash function
-    unsigned int seed = 0;  
-    for (int i = 0; i < k; i++) generateHashFunc(seed, hashFunctions);
+    // 写死, 用seed为0~k-1的随机种子生成的k个hash function 
+    for (int i = 0; i < k; i++) generateHashFunc(i, hashFunctions);
 }
 
 void loadIndexItem(int k, string index_file){
@@ -42,10 +41,15 @@ void loadIndexItem(int k, string index_file){
         indexArr[i] = new IndexItem[wordNum];
     }
 
-    ifstream inFile(index_file, ios::out | ios::binary);
+    ifstream inFile(index_file, ios::in | ios::binary);
     for (int i = 0; i < k; i++) {
         for (int j = 0; j < wordNum; j++) {
             inFile.read((char *)&indexArr[i][j], sizeof(IndexItem));
+            if(indexArr[i][j].offset == 1808608800ULL )
+            {
+                cout << i<< "   "<<j<<endl;
+                cout << indexArr[i][j].windowsNum<<endl;
+            }
         }
     }
     inFile.close();
@@ -54,6 +58,7 @@ void loadIndexItem(int k, string index_file){
 
 
 int main(){
+    
     int max_k = 100; // the maximum number of hash functions
 
     int k = 40;
@@ -68,11 +73,11 @@ int main(){
     Query query(query_seq, theta, k);
     
     vector<CW> duplicateCWs = query.getResult();
-    
+    cout<<"total founded intervals amount: "<< duplicateCWs.size() <<endl;
     // read words from source folder
     // string src_path = "./py_script/1k_dir/";
-    string src_path = "./dataset/10k_byte/";
-    string file_name = "10k.bytes";
+    string src_path = "./dataset/test_byte/";
+    string file_name = "test.bytes";
     vector<string> files; // store file_path of each document in the given folder
     loadFilesNameByBytes(file_name,src_path, files);
 
