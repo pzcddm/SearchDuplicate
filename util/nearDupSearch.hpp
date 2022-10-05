@@ -9,7 +9,6 @@
 
 using namespace std;
 
-
 struct Point {
     int pos;   // position of the start point or end point
     bool flag; // start point(false) or end point(1)
@@ -30,70 +29,47 @@ struct Point {
     }
 };
 
+// Line Sweep Algorithm for second dimension
 void lineSweep(vector<Point> &points, const int &thres, vector<pair<int, int>> &res_intervals) {
     sort(points.begin(), points.end());
 
-    // Line Sweep Algorithm
     unordered_set<int> ids;
-    int intersection_st = -1;
-    int intersection_ed = -1;
+
+    int pre_pos = -1;
+    int current_pos = points[0].pos;
+
     for (int i = 0; i < points.size(); i++) {
+        // check If iterate to a new position
+        if (i > 0 && points[i].pos != points[i - 1].pos)
+            // if it meets the minmum intersection amount
+            if (ids.size() >= thres) {
+                pre_pos = points[i - 1].pos;
+                current_pos = points[i].pos;
+
+                res_intervals.push_back(make_pair(pre_pos, current_pos)); // right open interval
+            }
         // start point added to set
         // and end point erased from set
         if (points[i].flag == 0) {
-            // the situation that thet size of set will be upon thres soon
-            if (intersection_st == -1 && ids.size() == thres - 1) {
-                intersection_st = points[i].pos;
-            }
             ids.insert(points[i].id);
         } else {
-            // if current point is a end point, that means in this position, there won't be any start points
-            // because the sort operation makes start points first in one position
-            if (intersection_st != -1 && ids.size() == thres) {
-                intersection_ed = points[i].pos;
-
-                // cout << "intersection_st_2d: " << intersection_st << " ed: " << intersection_ed << endl;
-                res_intervals.push_back(make_pair(intersection_st, intersection_ed));
-
-                // clear intersection_st
-                intersection_st = -1;
-                intersection_ed = -1;
-            }
             ids.erase(points[i].id);
-        }
-
-        // // if this point it the last point, end this set and record the status
-        if (i == points.size() - 1 && intersection_st != -1) {
-            assert(ids.size() >= thres);
-            intersection_ed = points[i].pos;
-
-            // cout << "intersection_st_2d: " << intersection_st << " ed: " << intersection_ed << endl;
-            res_intervals.push_back(make_pair(intersection_st, intersection_ed));
         }
     }
 }
 
-void lineSweepHelper(const vector<CW> &cw_vet, const int &doc_id, const unordered_set<int> &ids, const int &intersection_st, const int thres, vector<CW> &res) {
+void lineSweepHelper(const vector<CW> &cw_vet, const unordered_set<int> &ids, vector<pair<int, int>> &intersected_2D_intervals, const int thres) {
     // create the points needed in line sweep algo in second dimension
     vector<Point> tmp_points(ids.size() * 2);
     int tmp_cnt = 0;
     for (auto const &id : ids) {
         tmp_points[tmp_cnt << 1] = Point(cw_vet[id].c, 0, id);
-        tmp_points[tmp_cnt << 1 | 1] = Point(cw_vet[id].r, 1, id);
+        tmp_points[tmp_cnt << 1 | 1] = Point(cw_vet[id].r + 1, 1, id); // Left closed and right open interval
         tmp_cnt++;
     }
     // Implement Line Sweep Algo in second dimension(those corresponding [c,r])
-    vector<pair<int, int>> intersected_2D_intervals;
-    lineSweep(tmp_points, thres, intersected_2D_intervals);
 
-    // Simply choose the farthest r and push it into the result
-    if (intersected_2D_intervals.size() > 0) {
-        int farthest_r = -1;
-        for (auto const &pa : intersected_2D_intervals) {
-            farthest_r = max(farthest_r, pa.second);
-        }
-        res.emplace_back(doc_id, intersection_st, -1, farthest_r);
-    }
+    lineSweep(tmp_points, thres, intersected_2D_intervals);
 }
 
 void nearDupSearch(const vector<CW> &cw_vet, const int thres, vector<CW> &res) {
@@ -104,54 +80,41 @@ void nearDupSearch(const vector<CW> &cw_vet, const int thres, vector<CW> &res) {
 
     for (int i = 0; i < cw_vet.size(); i++) {
         points[i << 1] = Point(cw_vet[i].l, 0, i);
-        points[i << 1 | 1] = Point(cw_vet[i].c, 1, i);
+        points[i << 1 | 1] = Point(cw_vet[i].c + 1, 1, i); // Left closed and right open interval
     }
 
     sort(points.begin(), points.end());
 
     // Line Sweep Algorithm
     unordered_set<int> ids;
-    int intersection_st = -1;
-    int intersection_ed = -1;
+    int pre_pos = -1;
+    int current_pos = points[0].pos;
     for (int i = 0; i < points.size(); i++) {
+        // check If iterate to a new position
+        if (i > 0 && points[i].pos != points[i - 1].pos) {
+            if (ids.size() >= thres) {
+                // to get the result of intersected 2D intervals
+                vector<pair<int, int>> intersected_2D_intervals;
+                lineSweepHelper(cw_vet, ids, intersected_2D_intervals, thres);
+
+                // if get the result
+                if (intersected_2D_intervals.size() > 0) {
+                    pre_pos = points[i - 1].pos;
+                    current_pos = points[i].pos;
+
+                    for (auto const &interval : intersected_2D_intervals) {
+                        assert(current_pos <= interval.second);
+                        res.emplace_back(doc_id, pre_pos, -1, interval.second - 1); // because of right open interval the r should be minused 1
+                    }
+                }
+            }
+        }
         // start point added to set
         // and end point erased from set
         if (points[i].flag == 0) {
-            // the situation that thet size of set will be upon thres soon
-            if (intersection_st == -1 && ids.size() == thres - 1) {
-                intersection_st = points[i].pos;
-            }
             ids.insert(points[i].id);
         } else {
-            // if current point is a end point, that means in this position, there won't be any start points
-            // because the sort operation makes start points first in one position
-
-            // the situation that the size of set will be lower than thres soon
-            // cout << "i: " << i <<endl;
-            // cout <<" id: " << points[i].id <<endl;
-            // cout <<"ids size: "<< ids.size()<<endl;
-            if (intersection_st != -1 && ids.size() == thres) {
-                intersection_ed = points[i].pos;
-
-                // cout << "intersection_st: " << intersection_st << " ed: " << intersection_ed << endl;
-                // Use LineSweepAlgo to find intersected range in [c,r]s
-                lineSweepHelper(cw_vet, doc_id, ids, intersection_st, thres, res);
-
-                // clear intersection_st
-                intersection_st = -1;
-                intersection_ed = -1;
-            }
             ids.erase(points[i].id);
-        }
-
-        // // if this point it the last point, end this set and record the status
-        if (i == points.size() - 1 && intersection_st != -1) {
-            assert(ids.size() >= thres);
-            intersection_ed = points[i].pos;
-
-            // cout << "intersection_st: " << intersection_st << " ed: " << intersection_ed << endl;
-            // Implement line Sweep Algo in second dimension(those corresponding [c,r])
-            lineSweepHelper(cw_vet, doc_id, ids, intersection_st, thres, res);
         }
     }
 
