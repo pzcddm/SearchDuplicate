@@ -25,7 +25,7 @@ void prepareGlobalVariables(int k){
     // read Stop words
     readStopWords("stopwords.txt", stopwords);
     // Load the map of word to int
-    const string wiki_words_file_name = "wiki_test_words.txt";
+    const string wiki_words_file_name = "wiki_train_words.txt";
     loadWord2id(wiki_words_file_name, word2id);
     wordNum = word2id.size(); // the number of tokens
     cout << "total token amount: "<<wordNum << endl;
@@ -59,10 +59,10 @@ void loadIndexItem(int k, string index_file){
 
 int main(){
     
-    int max_k = 100; // the maximum number of hash functions
+    int max_k = 50; // the maximum number of hash functions
 
-    int k = 40;
-    string query_seq = "was a research scientist working for the U.S. Department of Agriculture, and his mother, Edwina Sunny Lynch (née Sundholm; 1919–2004), was an English language tutor. ";
+    int k = 25;
+    string query_seq = "until early 2008. She has two decks. The upper deck offers business class accommodation. This vessel was built by Lindstol Skips, in Risor Norway. Unlike the other Supercat vessels, this vessel is equipped with controllable pitch propellers as its propulsion system. Supercat 3";
     float theta = 0.9;
     
     prepareGlobalVariables(max_k);
@@ -73,7 +73,6 @@ int main(){
     Query query(query_seq, theta, k);
     
     vector<CW> duplicateCWs = query.getResult();
-    cout<<"total founded intervals amount: "<< duplicateCWs.size() <<endl;
     // read words from source folder
     // string src_path = "./py_script/1k_dir/";
     string src_path = "./dataset/test_byte/";
@@ -81,10 +80,12 @@ int main(){
     vector<string> files; // store file_path of each document in the given folder
     loadFilesNameByBytes(file_name,src_path, files);
 
-    // getFiles(src_path, files);
-    for(auto const & cw : duplicateCWs){
-        cout<<"Document name: "<< files[cw.T]<<endl;
-        cw.display();
-    }
+    // // getFiles(src_path, files);
+    // for(auto const & cw : duplicateCWs){
+    //     cout<<"Document name: "<< files[cw.T]<<endl;
+    //     cw.display();
+    // }
+
+    cout<<"total founded intervals amount: "<< duplicateCWs.size() <<endl;
 
 }

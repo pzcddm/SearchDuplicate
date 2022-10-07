@@ -2,19 +2,12 @@
 #include <cctype>
 #include <iostream>
 #include <fstream>
+#include <execution>
 #include <omp.h>
 #include "util/utils.hpp"
 #include "util/new_utils.hpp"
 
 #include "util/cw.hpp"
-
-// save tokens
-class TokenIndex {
-    int k;
-    int tokenNum;
-    struct Index {
-    };
-};
 
 int INTERVAL_LIMIT;
 
@@ -50,20 +43,19 @@ void generateCompatWindow(const int &doc_id, const vector<int> &doc, vector<pair
 
 // Todo: Build Index to memory
 int main() {
-    const string wiki_words_file_name = "wiki_test_words.txt";
+    const string wiki_words_file_name = "wiki_train_words.txt";
     // const string src_path = "dataset/10k_byte/";
     // const string file_name ="10k.bytes";
-    const string src_path = "dataset/test_byte/";
-    const string file_name = "test.bytes";
+    const string src_path = "dataset/train_byte/";
+    const string file_name = "train.bytes";
     // string src_path = "./py_script/1k_dir/";
     // 先试试test文件夹里的文本
 
-    int k = 100; // the number of hash functions
+    int k = 50; // the number of hash functions
     // set the interval limit for generating compat windows
-    INTERVAL_LIMIT = 20;
+    INTERVAL_LIMIT = 10;
 
     //写死, 用seed为0~k-1的随机种子生成的k个hash function
-    unsigned int seed = 0;
     vector<pair<int, int>> hf;
     for (int i = 0; i < k; i++) generateHashFunc(i, hf);
 
@@ -126,12 +118,13 @@ int main() {
 
     cout << "total compat window amount: " << res_cws.size() << endl;
 
-    sort(res_cws.begin(), res_cws.end());
+    std::sort(std::execution::par_unseq, res_cws.begin(), res_cws.end());
+    // sort(res_cws.begin(), res_cws.end());
     printf("------------------Compat Windows Generated------------------\n");
     // Timer Off
     cout << "Compat Windows Generation Time Cost: " << RepTime(start) << " Seconds\n";
 
-    cout << "sort complete and write cws into file" << endl;
+    cout << "sort complete and write cws into file" << endl; 
     // write these cws into a file
     ofstream outFile("CompatWindows", ios::out | ios::binary);
     unsigned long long compat_windows_num = 0;

@@ -1,7 +1,10 @@
 # data
 *.txt
+index
 py_script
 CompatWindows
 indexFile
 dataset
 10k_CompatWindows
+template
+*.bin
