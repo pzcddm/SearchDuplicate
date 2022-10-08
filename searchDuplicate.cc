@@ -25,7 +25,7 @@ void prepareGlobalVariables(int k){
     // read Stop words
     readStopWords("stopwords.txt", stopwords);
     // Load the map of word to int
-    const string wiki_words_file_name = "wiki_train_words.txt";
+    const string wiki_words_file_name = "wiki_test_words.txt";
     loadWord2id(wiki_words_file_name, word2id);
     wordNum = word2id.size(); // the number of tokens
     cout << "total token amount: "<<wordNum << endl;
@@ -45,46 +45,41 @@ void loadIndexItem(int k, string index_file){
     for (int i = 0; i < k; i++) {
         for (int j = 0; j < wordNum; j++) {
             inFile.read((char *)&indexArr[i][j], sizeof(IndexItem));
-            if(indexArr[i][j].offset == 1808608800ULL )
-            {
-                cout << i<< "   "<<j<<endl;
-                cout << indexArr[i][j].windowsNum<<endl;
-            }
         }
     }
     inFile.close();
     printf("------------------Index File Loaded------------------\n");
 }
 
-
 int main(){
     
-    int max_k = 50; // the maximum number of hash functions
+    int max_k = 40; // the maximum number of hash functions
 
-    int k = 25;
-    string query_seq = "until early 2008. She has two decks. The upper deck offers business class accommodation. This vessel was built by Lindstol Skips, in Risor Norway. Unlike the other Supercat vessels, this vessel is equipped with controllable pitch propellers as its propulsion system. Supercat 3";
-    float theta = 0.9;
-    
+    int k = 20;
+    // string query_seq = "The San Saba Mission was established in April 1757 near the site of present day Menard, Texas.  Three miles away, a military post, Presidio San Luis de las Amarillas, was established at the same time to protect the Mission.";
+    string query_seq = "Virginia, but since his parents had moved to Walnut Creek, California, he stayed with his friend Toby Keeler for a while. He decided to move to the city of Philadelphia and enroll at the Pennsylvania Academy of Fine Arts,";
+    float theta = 0.7;
+    const string cw_dir = "compatWindows/test/";
     prepareGlobalVariables(max_k);
     // load the IndexItem
-    loadIndexItem(max_k, "indexFile");
+    loadIndexItem(max_k, "indexFileTest.bin");
 
     // Create query
-    Query query(query_seq, theta, k);
+    Query query(query_seq, theta, k, cw_dir);
     
     vector<CW> duplicateCWs = query.getResult();
+
     // read words from source folder
-    // string src_path = "./py_script/1k_dir/";
     string src_path = "./dataset/test_byte/";
     string file_name = "test.bytes";
     vector<string> files; // store file_path of each document in the given folder
     loadFilesNameByBytes(file_name,src_path, files);
 
-    // // getFiles(src_path, files);
-    // for(auto const & cw : duplicateCWs){
-    //     cout<<"Document name: "<< files[cw.T]<<endl;
-    //     cw.display();
-    // }
+    // getFiles(src_path, files);
+    for(auto const & cw : duplicateCWs){
+        cout<<"Document name: "<< files[cw.T]<<endl;
+        cw.display();
+    }
 
     cout<<"total founded intervals amount: "<< duplicateCWs.size() <<endl;
 

@@ -21,15 +21,16 @@ extern int wordNum;
 
 class Query {
     string sequence;
-    float theta; // threshold that is lower than 1
-    int k;       // the num of hash functions that use
+    float theta;    // threshold that is lower than 1
+    int k;          // the num of hash functions that use
+    string cws_dir; // the directory path of cws
 
 public:
     Query() {
     }
 
-    Query(string _seq, float _theta, int _k) :
-        sequence(_seq), theta(_theta), k(_k) {
+    Query(string _seq, float _theta, int _k, string _cws_dir) :
+        sequence(_seq), theta(_theta), k(_k), cws_dir(_cws_dir){
         assert(theta <= 1.0);
     }
 
@@ -50,7 +51,6 @@ public:
         // Implement Find Subset algorithm to each group and filter those whose size is lower than ceil(theta*k)
         int thres = int(ceil(k * theta));
 
-
         for (auto const &gp : doc_groups) {
             // filter each group's size
             if (gp.second.size() < thres)
@@ -61,7 +61,7 @@ public:
             nearDupSearch(gp.second, thres, res);
         }
 
-        printf("Filtered Groups Amount: %d\n",filtered_groupNum);
+        printf("Filtered Groups Amount: %d\n", filtered_groupNum);
         printf("This query operation costs %f seconds\n", RepTime(timerOn));
         return res;
     }
@@ -95,7 +95,10 @@ private:
             assert(token_id >= 0 && token_id < wordNum);
             IndexItem &indexItem = indexArr[i][token_id];
             vector<CW> cw_vet;
-            indexItem.getCompatWindows("CompatWindows", cw_vet, token_id);
+
+            //load the corresponding cws file base on the current hash function
+            string cws_file = cws_dir + to_string(i) +".bin";
+            indexItem.getCompatWindows(cws_file, cw_vet, token_id);
 
             // group them by their document id
             for (auto &cw : cw_vet) {
@@ -110,6 +113,6 @@ private:
             }
         }
 
-        printf("Groups Amount(Documents that minhashes corresponde): %lu\n",groups.size());
+        printf("Groups Amount(Documents that minhashes corresponde): %lu\n", groups.size());
     }
 };

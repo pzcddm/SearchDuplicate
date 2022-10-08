@@ -20,21 +20,21 @@ public:
         r = tmp.r;
     }
     bool operator<(const CW &tmp) const {
-        if(T == tmp.T){
-            if(c == tmp.c){
-                return l<tmp.l;
+        if (T == tmp.T) {
+            if (c == tmp.c) {
+                return l < tmp.l;
             }
-            return c <tmp.c;
+            return c < tmp.c;
         }
         return T < tmp.T;
     }
 
     bool operator<=(const CW &tmp) const {
-        if(T == tmp.T){
-            if(c == tmp.c){
-                return l<=tmp.l;
+        if (T == tmp.T) {
+            if (c == tmp.c) {
+                return l <= tmp.l;
             }
-            return c <=tmp.c;
+            return c <= tmp.c;
         }
         return T <= tmp.T;
     }
@@ -47,7 +47,6 @@ public:
 class Wrapped_CW {
 public:
     int token_id;
-    int ith_hash;
     CW cw;
 
     Wrapped_CW() {
@@ -55,34 +54,27 @@ public:
 
     Wrapped_CW(const Wrapped_CW &tmp) {
         token_id = tmp.token_id;
-        ith_hash = tmp.ith_hash;
         cw = tmp.cw;
     }
 
-    Wrapped_CW(const int &_token_id, const int &_ith_hash, const int &_T, const int &_l, const int &_c, const int &_r) :
-        token_id(_token_id), ith_hash(_ith_hash), cw(_T, _l, _c, _r) {
+    Wrapped_CW(const int &_token_id, const int &_T, const int &_l, const int &_c, const int &_r) :
+        token_id(_token_id), cw(_T, _l, _c, _r) {
     }
 
     bool operator<(const Wrapped_CW &tmp) const {
         if (token_id == tmp.token_id) {
-            if (ith_hash == tmp.ith_hash) {
-                return cw < tmp.cw;
-            }
-            return ith_hash < tmp.ith_hash;
+            return cw < tmp.cw;
         }
         return token_id < tmp.token_id;
     }
 
     bool operator<=(const Wrapped_CW &tmp) const {
         if (token_id == tmp.token_id) {
-            if (ith_hash == tmp.ith_hash) {
-                return cw <= tmp.cw;
-            }
-            return ith_hash <= tmp.ith_hash;
+            return cw <= tmp.cw;
         }
         return token_id <= tmp.token_id;
     }
     void display() {
-        printf("token_id:%d, ith_hashs: %d\n", token_id, ith_hash);
+        printf("token_id:%d\n", token_id);
     }
 };
