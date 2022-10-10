@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 class CW {
 public:
     int T; // document id
@@ -41,6 +42,15 @@ public:
 
     void display() const {
         printf("(document id: %d, l: %d, c: %d, r: %d)\n", T, l, c, r);
+    }
+
+    bool intersected(const CW &tmp)const{
+        return tmp.T == T &&((l<= tmp.l && tmp.l <= r) || (r>= tmp.l && tmp.r >= r));
+    }
+
+    void merge(const CW &tmp){
+        l = std::min(tmp.l,l);
+        r = std::max(tmp.r,r);
     }
 };
 

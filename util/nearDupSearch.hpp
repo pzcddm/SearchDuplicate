@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <unordered_set>
 #include <cassert>
+#include <execution>
 
 using namespace std;
 
@@ -31,8 +32,8 @@ struct Point {
 
 // Line Sweep Algorithm for second dimension
 void lineSweep(vector<Point> &points, const int &thres, vector<pair<int, int>> &res_intervals) {
-    sort(points.begin(), points.end());
-
+    // sort(points.begin(), points.end());
+    sort(std::execution::par_unseq, points.begin(), points.end());
     unordered_set<int> ids;
 
     int pre_pos = -1;
@@ -72,18 +73,19 @@ void lineSweepHelper(const vector<CW> &cw_vet, const unordered_set<int> &ids, ve
     lineSweep(tmp_points, thres, intersected_2D_intervals);
 }
 
-void nearDupSearch(const vector<CW> &cw_vet, const int thres, vector<CW> &res) {
+void nearDupSearch(const vector<CW> &cw_vet, const int thres, vector<CW> &res, unsigned int & winNum) {
     // Get the points from the 1D interval of these compat windows
     vector<Point> points(cw_vet.size() * 2);
     int doc_id = cw_vet[0].T;
     //  cout << "Finding Near Duplicate in this doc_id : "<<doc_id<<endl;
-
+ 
     for (int i = 0; i < cw_vet.size(); i++) {
         points[i << 1] = Point(cw_vet[i].l, 0, i);
         points[i << 1 | 1] = Point(cw_vet[i].c + 1, 1, i); // Left closed and right open interval
     }
 
-    sort(points.begin(), points.end());
+    // sort(points.begin(), points.end());
+    sort(std::execution::par_unseq, points.begin(), points.end());
 
     // Line Sweep Algorithm
     unordered_set<int> ids;
@@ -104,6 +106,8 @@ void nearDupSearch(const vector<CW> &cw_vet, const int thres, vector<CW> &res) {
 
                     for (auto const &interval : intersected_2D_intervals) {
                         assert(current_pos <= interval.second);
+                        // printf("(%d,%d,%d,%d)\n",pre_pos, current_pos, interval.first, interval.second);
+                        winNum += (current_pos - pre_pos) * (interval.second - interval.first);
                         res.emplace_back(doc_id, pre_pos, -1, interval.second - 1); // because of right open interval the r should be minused 1
                     }
                 }

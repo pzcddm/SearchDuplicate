@@ -51,6 +51,19 @@ void loadIndexItem(int k, string index_file){
     printf("------------------Index File Loaded------------------\n");
 }
 
+int reportPassagesNum(const vector<CW> & duplicateCWs){
+    int pasNum = 0;
+    CW tmp_cw(0,-1,-1,-1);
+    for(auto const & cw : duplicateCWs){
+        if(tmp_cw.intersected(cw)){
+            tmp_cw.merge(cw);
+        }else{
+            pasNum ++;
+            tmp_cw = cw;
+        }
+    }
+    return pasNum;
+} 
 int main(){
     
     int max_k = 40; // the maximum number of hash functions
@@ -65,10 +78,12 @@ int main(){
     loadIndexItem(max_k, "indexFileTest.bin");
 
     // Create query
+    unsigned int windowsNum = 0;
     Query query(query_seq, theta, k, cw_dir);
     
-    vector<CW> duplicateCWs = query.getResult();
+    vector<CW> duplicateCWs = query.getResult(windowsNum);
 
+    printf("Report Total Windows Num: %u\n", windowsNum);
     // read words from source folder
     string src_path = "./dataset/test_byte/";
     string file_name = "test.bytes";
@@ -81,6 +96,7 @@ int main(){
         cw.display();
     }
 
+    cout<<"total founded passages amount: "<<reportPassagesNum(duplicateCWs)<<endl;
     cout<<"total founded intervals amount: "<< duplicateCWs.size() <<endl;
 
 }
