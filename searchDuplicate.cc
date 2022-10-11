@@ -78,6 +78,9 @@ int main(){
     loadIndexItem(max_k, indexFile);
 
     cout<<"tokenized seq Num"<< tokenizedSeqs[0].size() <<endl;
+    for(auto const & tmp: tokenizedSeqs[0]){
+        cout<<tmp<<endl;
+    }
     if(tokenizedSeqs[0].size()<k){
         cout<<"error the tokenized sequence length is smaller than k!"<<endl;
     }
