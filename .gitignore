@@ -8,3 +8,8 @@ dataset
 10k_CompatWindows
 template
 *.bin
+*.o
+buildCompatWindows
+buildLargeNumWindows
+searchDuplicate
+test*
