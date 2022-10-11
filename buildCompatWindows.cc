@@ -14,7 +14,7 @@ int INTERVAL_LIMIT;
 #define MAX_LENGTH 2000000
 
 // Partition algorithm: In each recurrence, it will search and minimun element in current range and split the range into two pieces
-void partition(const int &doc_id, const vector<int> &doc, const vector<pair<int, int>> &seg, int a, int b, vector<vector<Wrapped_CW>> &res_cws) {
+void partition(const int &doc_id, const vector<int> &doc, const vector<pair<int, int>> &seg, int a, int b, vector<vector<CW>> &res_cws) {
     if (a + INTERVAL_LIMIT >= b)
         return;
 
@@ -29,13 +29,13 @@ void partition(const int &doc_id, const vector<int> &doc, const vector<pair<int,
                 ret = seg[b];
     }
 
-    res_cws[doc[ret.second]].emplace_back(doc[ret.second], doc_id, a, ret.second, b);
+    res_cws[doc[ret.second]].emplace_back(doc_id, a, ret.second, b);
     partition(doc_id, doc, seg, a, ret.second - 1, res_cws);
     partition(doc_id, doc, seg, ret.second + 1, b, res_cws);
 }
 
 // get the compat windows of one document
-void generateCompatWindow(const int &doc_id, const vector<int> &doc, vector<pair<int, int>> &hf, int ith_hf, vector<vector<Wrapped_CW>> &res_cws, vector<pair<int, int>> &seg) {
+void generateCompatWindow(const int &doc_id, const vector<int> &doc, vector<pair<int, int>> &hf, int ith_hf, vector<vector<CW>> &res_cws, vector<pair<int, int>> &seg) {
     assert(INTERVAL_LIMIT >= 1);
 
     int n = doc.size();
@@ -110,7 +110,7 @@ int main() {
     vector<vector<pair<int, int>>> segtrees(thread_num, vector<pair<int, int>>(MAX_LENGTH));
 
     for (int i = 0; i < k; i++) {
-        vector<vector<vector<Wrapped_CW>>> tmp_vetor(thread_num, vector<vector<Wrapped_CW>>(tokenNum)); // Three-dimensional(threads, tokens, compatwindows) arrays
+        vector<vector<vector<CW>>> tmp_vetor(thread_num, vector<vector<CW>>(tokenNum)); // Three-dimensional(threads, tokens, compatwindows) arrays
 
         // Genrate Compat windows under the current hash function
 #pragma omp parallel for
@@ -120,7 +120,7 @@ int main() {
         }
 
         // Merge inverted list generated from different threads and sort it
-        vector<vector<Wrapped_CW>> res_cws(tokenNum);
+        vector<vector<CW>> res_cws(tokenNum);
 #pragma omp parallel for reduction(+ \
                                    : total_cws_amount)
         for (int j = 0; j < tokenNum; j++) {
@@ -141,13 +141,12 @@ int main() {
 
         unsigned long long offset = 0; 
         for (int j = 0; j < tokenNum; j++) {
-            for (auto const &wrapped_cw : res_cws[j]) {
-                assert(wrapped_cw.token_id >= 0);
-                outFile.write((char *)&wrapped_cw, sizeof(wrapped_cw));
+            for (auto const &cw : res_cws[j]) {
+                outFile.write((char *)&cw, sizeof(cw));
             }
             indexArr[i][j].windowsNum = res_cws[j].size();
             indexArr[i][j].offset = offset;
-            offset = offset + sizeof(Wrapped_CW)*indexArr[i][j].windowsNum;
+            offset = offset + sizeof(CW)*indexArr[i][j].windowsNum;
         }
         outFile.close();
         // Timer Off
