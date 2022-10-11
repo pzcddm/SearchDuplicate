@@ -6,6 +6,8 @@
 
 #include "util/nearDupSearch.hpp"
 #include "util/cw.hpp"
+#include "util/IO.hpp"
+
 #include "util/utils.hpp"
 #include "util/new_utils.hpp"
 #include "util/indexItem.hpp"
@@ -15,19 +17,12 @@ using namespace std;
 
 
 // global variables
-unordered_map<string, int> word2id;
 IndexItem **indexArr;
 vector<pair<int, int>> hashFunctions;
-unordered_set<string> stopwords;
 int wordNum;
 
 void prepareGlobalVariables(int k){
-    // read Stop words
-    readStopWords("stopwords.txt", stopwords);
-    // Load the map of word to int
-    const string wiki_words_file_name = "wiki_test_words.txt";
-    loadWord2id(wiki_words_file_name, word2id);
-    wordNum = word2id.size(); // the number of tokens
+
     cout << "total token amount: "<<wordNum << endl;
     // 写死, 用seed为0~k-1的随机种子生成的k个hash function 
     for (int i = 0; i < k; i++) generateHashFunc(i, hashFunctions);
@@ -66,35 +61,48 @@ int reportPassagesNum(const vector<CW> & duplicateCWs){
 } 
 int main(){
     
-    int max_k = 40; // the maximum number of hash functions
+    int max_k = 100; // the maximum number of hash functions
+    wordNum = 64000;
+    int k = 100;
+    float theta = 0.9;
+    const string cw_dir = "compatWindows/openwebtext/";
+    const string indexFile = "index/indexOpenWebText.bin";
+    const string tokSeqFile ="../GenerationExperiment/tokenizeSeq/gpt2-small-seq.bin";
 
-    int k = 20;
-    // string query_seq = "The San Saba Mission was established in April 1757 near the site of present day Menard, Texas.  Three miles away, a military post, Presidio San Luis de las Amarillas, was established at the same time to protect the Mission.";
-    string query_seq = "Virginia, but since his parents had moved to Walnut Creek, California, he stayed with his friend Toby Keeler for a while. He decided to move to the city of Philadelphia and enroll at the Pennsylvania Academy of Fine Arts,";
-    float theta = 0.7;
-    const string cw_dir = "compatWindows/test/";
+    // load the tokenized sequences
+    vector<vector<int>> tokenizedSeqs;
+    loadBin(tokSeqFile,tokenizedSeqs);
+    
     prepareGlobalVariables(max_k);
     // load the IndexItem
-    loadIndexItem(max_k, "indexFileTest.bin");
+    loadIndexItem(max_k, indexFile);
+
+    cout<<"tokenized seq Num"<< tokenizedSeqs[0].size() <<endl;
+    if(tokenizedSeqs[0].size()<k){
+        cout<<"error the tokenized sequence length is smaller than k!"<<endl;
+    }
 
     // Create query
     unsigned int windowsNum = 0;
-    Query query(query_seq, theta, k, cw_dir);
+    Query query(tokenizedSeqs[0], theta, k, cw_dir);
+
+    
     
     vector<CW> duplicateCWs = query.getResult(windowsNum);
 
-    printf("Report Total Windows Num: %u\n", windowsNum);
-    // read words from source folder
-    string src_path = "./dataset/test_byte/";
-    string file_name = "test.bytes";
-    vector<string> files; // store file_path of each document in the given folder
-    loadFilesNameByBytes(file_name,src_path, files);
 
-    // getFiles(src_path, files);
-    for(auto const & cw : duplicateCWs){
-        cout<<"Document name: "<< files[cw.T]<<endl;
-        cw.display();
-    }
+    printf("Report Total Windows Num: %u\n", windowsNum);
+    // // read words from source folder
+    // string src_path = "./dataset/test_byte/";
+    // string file_name = "test.bytes";
+    // vector<string> files; // store file_path of each document in the given folder
+    // loadFilesNameByBytes(file_name,src_path, files);
+
+    // // getFiles(src_path, files);
+    // for(auto const & cw : duplicateCWs){
+    //     cout<<"Document name: "<< files[cw.T]<<endl;
+    //     cw.display();
+    // }
 
     cout<<"total founded passages amount: "<<reportPassagesNum(duplicateCWs)<<endl;
     cout<<"total founded intervals amount: "<< duplicateCWs.size() <<endl;

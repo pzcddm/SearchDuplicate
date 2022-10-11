@@ -2,11 +2,11 @@
 #include <cctype>
 #include <iostream>
 #include <fstream>
-#include <execution>
+// #include <execution>
 #include <omp.h>
-#include "util/utils.hpp"
+// #include "util/utils.hpp"
 #include "util/new_utils.hpp"
-
+#include "util/IO.hpp"
 #include "util/cw.hpp"
 
 int INTERVAL_LIMIT;
@@ -43,19 +43,16 @@ void generateCompatWindow(const int &doc_id, const vector<int> &doc, vector<pair
 
 // Todo: Build Index to memory
 int main() {
-    const string wiki_words_file_name = "wiki_test_words.txt";
-    // const string src_path = "dataset/10k_byte/";
-    // const string file_name ="10k.bytes";
-    const string src_path = "dataset/test_byte/";
-    const string file_name = "test.bytes";
-    const string saved_dir = "compatWindows/test/";
 
-    // string src_path = "./py_script/1k_dir/";
+    const string scr_dir = "../openwebtext_64K_vocal/";
+    const string saved_dir = "compatWindows/openwebtext/";
+
+    // string src_path = "./py_script/1k_dir/"
     // 先试试test文件夹里的文本
 
-    int k = 40; // the number of hash functions
+    int k = 100; // the number of hash functions
     // set the interval limit for generating compat windows
-    INTERVAL_LIMIT = 16;
+    INTERVAL_LIMIT = 50;
 
     //写死, 用seed为0~k-1的随机种子生成的k个hash function
     vector<pair<int, int>> hf;
@@ -65,14 +62,12 @@ int main() {
     auto start = LogTime();
     printf("------------------Loading Document File------------------\n");
 
-    vector<string> files; // store file_path of each document in the given folder
     vector<vector<int>> docs;
-    vector<vector<int>> docs_offset;
-    loadDocByBytes(file_name, src_path, docs, docs_offset, files);
+    loadDataDir(scr_dir,docs);
     auto stop = chrono::high_resolution_clock::now();
     auto duration = chrono::duration_cast<chrono::microseconds>(stop - start);
     cout << "readfile time: " << duration.count() / 1000000.0 << " seconds" << endl;
-    int doc_num = files.size();
+    int doc_num = docs.size();
     cout << "doc number: " << doc_num << endl;
 
     printf("------------------Document File Loaded------------------\n");
@@ -100,8 +95,9 @@ int main() {
             res_cws.insert(res_cws.end(), tmp_vetor.begin(), tmp_vetor.end());
         }
 
-        // sort the compat windows
-        std::sort(std::execution::par_unseq, res_cws.begin(), res_cws.end());
+        // sort the compat windows]
+        sort(res_cws.begin(), res_cws.end());
+        // std::sort(std::execution::par_unseq, res_cws.begin(), res_cws.end());
         total_cws_amount += res_cws.size();
 
         // write these cws into a file

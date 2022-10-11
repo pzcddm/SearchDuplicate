@@ -9,27 +9,20 @@
 using namespace std;
 
 int main() {
-    const string cw_dir = "compatWindows/test/";
-    const string index_file = "indexFileTest.bin";
-    const int k = 40; // the number of hash functions
-
-    // Load the map of word to int
-    unordered_map<string, int> word2id;
-    const string wiki_words_file_name = "wiki_test_words.txt";
-    loadWord2id(wiki_words_file_name, word2id);
-    int wordNum = word2id.size(); // the number of tokens
-    cout << wordNum << endl;
+    const string cw_dir = "compatWindows/openwebtext/";
+    const string index_file = "index/indexOpenWebText.bin";
+    const int k = 100; // the number of hash functions
+    const int tokenNum = 64000;
 
     IndexItem **indexArr;
     indexArr = new IndexItem *[k];
 
     for (int i = 0; i < k; i++) {
-        indexArr[i] = new IndexItem[wordNum];
+        indexArr[i] = new IndexItem[tokenNum];
     }
 
     
     Wrapped_CW tmp_wrappedCW;
-    
 
     printf("wrappedCW的字节数量为%lu\n", sizeof(tmp_wrappedCW));
     unsigned long long compat_windows_num = 0;
@@ -50,7 +43,7 @@ int main() {
 
             int token_id = tmp_wrappedCW.token_id;
 
-            assert(token_id >= 0 && token_id < wordNum);
+            assert(token_id >= 0 && token_id < tokenNum);
             // 还没碰到过这个IndexItem时
             if (indexArr[ith_hash][token_id].windowsNum == -1) {
                 indexArr[ith_hash][token_id].windowsNum = 1;
@@ -74,7 +67,7 @@ int main() {
 
     ofstream outFile(index_file, ios::out | ios::binary);
     for (int i = 0; i < k; i++) {
-        for (int j = 0; j < wordNum; j++) {
+        for (int j = 0; j < tokenNum; j++) {
             outFile.write((char *)&indexArr[i][j], sizeof(IndexItem));
         }
     }

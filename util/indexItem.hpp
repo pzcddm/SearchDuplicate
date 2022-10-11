@@ -26,6 +26,8 @@ public:
 
         inFile.seekg(offset,ios::beg);//把文件的写指针从文件开头向后移offset个字节
         Wrapped_CW tmp_wrappedCW;
+
+        res_cws.resize(windowsNum);
         for(int i =0 ;i<windowsNum;i++){
             inFile.read((char *)&tmp_wrappedCW, sizeof(tmp_wrappedCW));
 
@@ -37,7 +39,7 @@ public:
                 tmp_wrappedCW.display();
             }
             assert(token_id == tmp_wrappedCW.token_id);
-            res_cws.push_back(tmp_wrappedCW.cw);
+            res_cws[i]=tmp_wrappedCW.cw;
         }
         inFile.close();
     }

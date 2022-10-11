@@ -15,13 +15,11 @@
 using namespace std;
 
 extern vector<pair<int, int>> hashFunctions;
-extern unordered_map<string, int> word2id;
-extern unordered_set<string> stopwords;
 extern IndexItem **indexArr;
 extern int wordNum;
 
 class Query {
-    string sequence;
+    vector<int> seqTokenized;
     float theta;    // threshold that is lower than 1
     int k;          // the num of hash functions that use
     string cws_dir; // the directory path of cws
@@ -30,8 +28,8 @@ public:
     Query() {
     }
 
-    Query(string _seq, float _theta, int _k, string _cws_dir) :
-        sequence(_seq), theta(_theta), k(_k), cws_dir(_cws_dir){
+    Query(const vector<int> & _seq, float _theta, int _k, string _cws_dir) :
+        seqTokenized(_seq), theta(_theta), k(_k), cws_dir(_cws_dir){
         assert(theta <= 1.0);
     }
 
@@ -58,7 +56,7 @@ public:
             its[cnt++] = it;
         }
 
-// #pragma omp parallel for
+#pragma omp parallel for
         for (auto const & it  : its) {
             // filter each group's size
             if (it->second.size() < thres)
@@ -68,7 +66,7 @@ public:
             // Implement LineSweep Algorithm to find the intersection of intervals and get the result
             vector<CW> tmp_res;
             nearDupSearch(it->second, thres, res,winNum);
-// #pragma omp critical
+#pragma omp critical
             res.insert(res.end(), tmp_res.begin(), tmp_res.end());
         }
 
@@ -79,11 +77,6 @@ public:
 
 private:
     void getKMinHash(vector<int> &minHashesToken) {
-        // Prepocess sequence
-        vector<int> seqTokenized;
-        vector<int> offset;
-        seq2Int(sequence, seqTokenized, offset, word2id, stopwords); // tokenize the query sequence
-
 #pragma omp parallel for
         for (int i = 0; i < k; i++) {
             vector<int> hashValues(seqTokenized.size());
@@ -95,12 +88,15 @@ private:
             int minValuePos = min_element(hashValues.begin(), hashValues.end()) - hashValues.begin();
             minHashesToken[i] = seqTokenized[minValuePos];
         }
+        printf("------------------MinHashesToken Generated------------------\n");
     }
 
     // Group those compat window vectors by T (document id)
     void GroupT(map<int, vector<CW>> &groups, const vector<int> &minHashesToken) {
+        auto timerOn = LogTime();
         // load the coresponding cw vectors of these K minHashes
         // and group them by document idw
+        int thres = int(ceil(k * theta));
 
         assert(minHashesToken.size() == k);
         for (int i = 0; i < minHashesToken.size(); i++) {
@@ -113,19 +109,22 @@ private:
             string cws_file = cws_dir + to_string(i) +".bin";
             indexItem.getCompatWindows(cws_file, cw_vet, token_id);
 
+            cout<<"cws length "<<cw_vet.size()<<endl;
             // group them by their document id
-            for (auto &cw : cw_vet) {
-                int doc_id = cw.T;
-                if (groups.count(doc_id)) {
-                    groups[doc_id].push_back(cw);
-                } else {
-                    vector<CW> &tmp_vet = groups[doc_id];
-                    tmp_vet.push_back(cw);
-                    assert(groups[doc_id].size() > 0); // will delete (just to check)
-                }
-            }
+            // for (auto &cw : cw_vet) {
+            //     int doc_id = cw.T;
+
+            //     if (groups.count(doc_id)) {
+            //         groups[doc_id].push_back(cw);
+            //     } else {
+            //         vector<CW> &tmp_vet = groups[doc_id];
+            //         tmp_vet.push_back(cw);
+            //         assert(groups[doc_id].size() > 0); // will delete (just to check)
+            //     }
+            // }
         }
 
+        printf("This GroupT operation costs %f seconds\n", RepTime(timerOn));
         printf("Groups Amount(Documents that minhashes corresponde): %lu\n", groups.size());
     }
 };

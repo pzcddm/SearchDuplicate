@@ -75,31 +75,6 @@ void generateHashFunc(unsigned int seed, vector<pair<int, int>> &hf)
     hf.emplace_back(a, b);
 }
 
-void getFiles(string path, vector<string> &files)
-{
-    DIR *dr;
-    struct dirent *en;
-    string file_path;
-    dr = opendir(path.c_str()); //open all directory
-    if (dr)
-    {
-        while ((en = readdir(dr)) != NULL)
-        {
-            //ignore hidden files and folders
-            if (en->d_name[0] != '.')
-            {
-                const char end = path.back();
-                if (end == '/')
-                    file_path = path + en->d_name;
-                else
-                    file_path = path + '/' + en->d_name;
-                files.push_back(file_path);
-            }
-        }
-        closedir(dr); //close all directory
-    }
-}
-
 // Read stopwords from given file name
 void readStopWords(const string &fileName, unordered_set<string> &stopWords)
 {
@@ -241,18 +216,7 @@ void writeWords(const string file_name, vector<string> &words){
     }
     fout.close();
 }
-void buildDic(string src_path, unordered_set<string> stopWords, string file_name = "words.txt"){
-    vector<string> files;
-    vector<string> words;
-    getFiles(src_path, files);
-    /*
-    for (int i = 0; i < files.size(); i++){
-        cout << "current file is: " << files[i] << endl;
-    }
-    */
-    getWords(files, words, stopWords);
-    writeWords(file_name , words);
-}
+
 void loadWord2id(string file_name, unordered_map<string, int> &word2id){
     ifstream file(file_name, ios::in);
     string word;
