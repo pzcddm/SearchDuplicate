@@ -2,12 +2,12 @@
 #include <cctype>
 #include <iostream>
 #include <fstream>
-// #include <execution>
 #include <omp.h>
 // #include "util/utils.hpp"
 #include "util/new_utils.hpp"
 #include "util/IO.hpp"
 #include "util/cw.hpp"
+#include "util/indexItem.hpp"
 
 int INTERVAL_LIMIT;
 
@@ -61,8 +61,9 @@ void generateCompatWindow(const int &doc_id, const vector<int> &doc, vector<pair
 int main() {
     const string scr_dir = "../openwebtext_64K_vocal/";
     const string saved_dir = "compatWindows/openwebtext/";
+    const string index_file = "index/indexOpenWebText.bin";
 
-    const int token_num = 64000;
+    const int tokenNum = 64000;
     int k = 100; // the number of hash functions
     // set the interval limit for generating compat windows
     INTERVAL_LIMIT = 50;
@@ -70,6 +71,13 @@ int main() {
     //写死, 用seed为0~k-1的随机种子生成的k个hash function
     vector<pair<int, int>> hf;
     for (int i = 0; i < k; i++) generateHashFunc(i, hf);
+
+    // Index Item
+    IndexItem **indexArr;
+    indexArr = new IndexItem *[k];
+    for (int i = 0; i < k; i++) {
+        indexArr[i] = new IndexItem[tokenNum];
+    }
 
     // Timer On
     auto start = LogTime();
@@ -88,6 +96,8 @@ int main() {
 
     // Timer On
     start = LogTime();
+    // time cost of writing files
+    double writingDiskCost = 0;
 
     printf("------------------Generating Compat Windows------------------\n");
     // generate compat windows for every document for every hash function
@@ -100,18 +110,20 @@ int main() {
     vector<vector<pair<int, int>>> segtrees(thread_num, vector<pair<int, int>>(MAX_LENGTH));
 
     for (int i = 0; i < k; i++) {
+        vector<vector<vector<Wrapped_CW>>> tmp_vetor(thread_num, vector<vector<Wrapped_CW>>(tokenNum)); // Three-dimensional(threads, tokens, compatwindows) arrays
 
-        vector<vector<vector<Wrapped_CW>>> tmp_vetor(thread_num, vector<vector<Wrapped_CW>>(token_num)); // Three-dimensional(threads, tokens, compatwindows) arrays
-
+        // Genrate Compat windows under the current hash function
 #pragma omp parallel for
         for (int doc_id = 0; doc_id < docs.size(); doc_id++) {
             int thread_id = omp_get_thread_num();
             generateCompatWindow(doc_id, docs[doc_id], hf, i, tmp_vetor[thread_id], segtrees[thread_id]);
         }
 
-        vector<vector<Wrapped_CW>> res_cws(token_num);
-#pragma omp parallel for reduction(+:total_cws_amount)
-        for (int j = 0; j < token_num; j++) {
+        // Merge inverted list generated from different threads and sort it
+        vector<vector<Wrapped_CW>> res_cws(tokenNum);
+#pragma omp parallel for reduction(+ \
+                                   : total_cws_amount)
+        for (int j = 0; j < tokenNum; j++) {
             for (int tid = 0; tid < thread_num; i++) {
                 res_cws[j].insert(res_cws[j].end(), tmp_vetor[tid][j].begin(), tmp_vetor[tid][j].end());
             }
@@ -120,24 +132,47 @@ int main() {
             total_cws_amount += res_cws.size();
         }
 
+        // Timer ON
+        auto writingDiskTimer = LogTime();
+
         // write these cws into a file
         string save_path = saved_dir + to_string(i) + ".bin";
         ofstream outFile(save_path, ios::out | ios::binary);
-        for (int j = 0; j < token_num; j++) {
-          for (auto const &wrapped_cw : res_cws[j]) {
-              assert(wrapped_cw.token_id >= 0);
-              outFile.write((char *)&wrapped_cw, sizeof(wrapped_cw));
-          }
+
+        unsigned long long offset = 0; 
+        for (int j = 0; j < tokenNum; j++) {
+            for (auto const &wrapped_cw : res_cws[j]) {
+                assert(wrapped_cw.token_id >= 0);
+                outFile.write((char *)&wrapped_cw, sizeof(wrapped_cw));
+            }
+            indexArr[i][j].windowsNum = res_cws[j].size();
+            indexArr[i][j].offset = offset;
+            offset = offset + sizeof(Wrapped_CW)*indexArr[i][j].windowsNum;
         }
         outFile.close();
+        // Timer Off
+        writingDiskCost += RepTime(writingDiskTimer);
+
         cout << save_path << " Saved\n";
+        
     }
 
     cout << "total compat window amount: " << total_cws_amount << endl;
-
     printf("------------------Compat Windows Generated------------------\n");
-    // Timer Off
-    cout << "Compat Windows Generation, Sorting, and Saving Time Cost: " << RepTime(start) << " Seconds\n";
-
     cout << "sort complete and write cws into file" << endl;
+    // Timer Off
+
+    cout << "Compat Windows Generation, Sorting, and Saving Time Cost: " << RepTime(start) << " Seconds\n";
+    cout << "Disk Writing Time Cost: " << writingDiskCost << " Seconds\n";
+
+    printf("------------------Writing Index File------------------\n");
+
+    ofstream outFile(index_file, ios::out | ios::binary);
+    for (int i = 0; i < k; i++) {
+        for (int j = 0; j < tokenNum; j++) {
+            outFile.write((char *)&indexArr[i][j], sizeof(IndexItem));
+        }
+    }
+    outFile.close();
+    printf("------------------Index File Writed------------------\n");
 }
