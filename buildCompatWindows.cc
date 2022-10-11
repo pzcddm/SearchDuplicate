@@ -14,59 +14,55 @@ int INTERVAL_LIMIT;
 #define MAX_LENGTH 2000000
 
 // Partition algorithm: In each recurrence, it will search and minimun element in current range and split the range into two pieces
-void partition(const int &doc_id, const vector<int> &doc, const vector<pair<int, int>> &seg, int a, int b, vector<Wrapped_CW> &res_cws) {
+void partition(const int &doc_id, const vector<int> &doc, const vector<pair<int, int>> &seg, int a, int b, vector<vector<Wrapped_CW>> &res_cws) {
     if (a + INTERVAL_LIMIT >= b)
         return;
 
     pair<int, int> ret(numeric_limits<int>::max(), -1);
     int n = doc.size();
-    for (a += n, b += n; a <= b; ++a/=2, --b/=2) {
-      if (a%2 == 1) 
-        if (seg[a].first < ret.first)
-          ret = seg[a];
-      if (b%2 == 0) 
-        if (seg[b].first < ret.first)
-          ret = seg[b];
+    for (a += n, b += n; a <= b; ++a /= 2, --b /= 2) {
+        if (a % 2 == 1)
+            if (seg[a].first < ret.first)
+                ret = seg[a];
+        if (b % 2 == 0)
+            if (seg[b].first < ret.first)
+                ret = seg[b];
     }
 
-    res_cws.emplace_back(doc[ret.second], doc_id, a, ret.second, b);
+    res_cws[doc[ret.second]].emplace_back(doc[ret.second], doc_id, a, ret.second, b);
     partition(doc_id, doc, seg, a, ret.second - 1, res_cws);
     partition(doc_id, doc, seg, ret.second + 1, b, res_cws);
 }
 
 // get the compat windows of one document
-void generateCompatWindow(const int &doc_id, const vector<int> &doc, vector<pair<int, int>> &hf, int ith_hf, vector<Wrapped_CW> &res_cws, vector<pair<int, int>> &seg) {
+void generateCompatWindow(const int &doc_id, const vector<int> &doc, vector<pair<int, int>> &hf, int ith_hf, vector<vector<Wrapped_CW>> &res_cws, vector<pair<int, int>> &seg) {
     assert(INTERVAL_LIMIT >= 1);
 
     int n = doc.size();
     if (seg.size() < 2 * n)
-      seg.resize(2 * n);
+        seg.resize(2 * n);
 
     for (int i = 0; i < n; i++) {
-      seg[n + i].first = hval(hf, doc[i], ith_hf);
-      seg[n + i].second = i;
+        seg[n + i].first = hval(hf, doc[i], ith_hf);
+        seg[n + i].second = i;
     }
 
-    for (int i = n - 1; i; i--) 
-    {
-      if (seg[2 * i].first < seg[2 * i + 1].first)
-        seg[i] = seg[2 * i];
-      else
-        seg[i] = seg[2 * i + 1];
+    for (int i = n - 1; i; i--) {
+        if (seg[2 * i].first < seg[2 * i + 1].first)
+            seg[i] = seg[2 * i];
+        else
+            seg[i] = seg[2 * i + 1];
     }
 
-    partition(doc_id, doc,  seg, 0, doc.size() - 1, res_cws);
+    partition(doc_id, doc, seg, 0, doc.size() - 1, res_cws);
 }
 
 // Todo: Build Index to memory
 int main() {
-
     const string scr_dir = "../openwebtext_64K_vocal/";
     const string saved_dir = "compatWindows/openwebtext/";
 
-    // string src_path = "./py_script/1k_dir/"
-    // 先试试test文件夹里的文本
-
+    const int token_num = 64000;
     int k = 100; // the number of hash functions
     // set the interval limit for generating compat windows
     INTERVAL_LIMIT = 50;
@@ -80,7 +76,7 @@ int main() {
     printf("------------------Loading Document File------------------\n");
 
     vector<vector<int>> docs;
-    loadDataDir(scr_dir,docs);
+    loadDataDir(scr_dir, docs);
     auto stop = chrono::high_resolution_clock::now();
     auto duration = chrono::duration_cast<chrono::microseconds>(stop - start);
     cout << "readfile time: " << duration.count() / 1000000.0 << " seconds" << endl;
@@ -101,37 +97,38 @@ int main() {
     unsigned long long total_cws_amount = 0;
 
     int thread_num = omp_get_max_threads();
-    vector<vector<pair<int, int>>> segtrees(thread_num, vector<int>(MAX_LENGTH));
-    
+    vector<vector<pair<int, int>>> segtrees(thread_num, vector<pair<int, int>>(MAX_LENGTH));
+
     for (int i = 0; i < k; i++) {
-        vector<vector<Wrapped_CW>> tmp_vetor(thread_num);
+
+        vector<vector<vector<Wrapped_CW>>> tmp_vetor(thread_num, vector<vector<Wrapped_CW>>(token_num)); // Three-dimensional(threads, tokens, compatwindows) arrays
+
 #pragma omp parallel for
         for (int doc_id = 0; doc_id < docs.size(); doc_id++) {
             int thread_id = omp_get_thread_num();
             generateCompatWindow(doc_id, docs[doc_id], hf, i, tmp_vetor[thread_id], segtrees[thread_id]);
-
-            
         }
 
-        vector<Wrapped_CW> res_cws;
-        for(int tid = 0 ;tid<thread_num;i++){
-          res_cws.insert(res_cws.end(), tmp_vetor[tid].begin(),tmp_vetor[tid].end());
+        vector<vector<Wrapped_CW>> res_cws(token_num);
+#pragma omp parallel for reduction(+:total_cws_amount)
+        for (int j = 0; j < token_num; j++) {
+            for (int tid = 0; tid < thread_num; i++) {
+                res_cws[j].insert(res_cws[j].end(), tmp_vetor[tid][j].begin(), tmp_vetor[tid][j].end());
+            }
+            // sort the compat windows]
+            sort(res_cws[j].begin(), res_cws[j].end());
+            total_cws_amount += res_cws.size();
         }
-
-        // sort the compat windows]
-        sort(res_cws.begin(), res_cws.end());
-        // std::sort(std::execution::par_unseq, res_cws.begin(), res_cws.end());
-        total_cws_amount += res_cws.size();
 
         // write these cws into a file
         string save_path = saved_dir + to_string(i) + ".bin";
         ofstream outFile(save_path, ios::out | ios::binary);
-
-        for (auto const &wrapped_cw : res_cws) {
-            assert(wrapped_cw.token_id >= 0);
-            outFile.write((char *)&wrapped_cw, sizeof(wrapped_cw));
+        for (int j = 0; j < token_num; j++) {
+          for (auto const &wrapped_cw : res_cws[j]) {
+              assert(wrapped_cw.token_id >= 0);
+              outFile.write((char *)&wrapped_cw, sizeof(wrapped_cw));
+          }
         }
-
         outFile.close();
         cout << save_path << " Saved\n";
     }
