@@ -11,8 +11,59 @@
 
 int INTERVAL_LIMIT;
 
+#define MAX_LENGTH 2000000
+
+/********* replace Testing with this one 
 // Partition algorithm: In each recurrence, it will search and minimun element in current range and split the range into two pieces
-void partition(const int &doc_id, const vector<int> &doc, const vector<int> &hashValues, int l, int r, vector<Wrapped_CW> &res_cws) {
+void partition(const int &doc_id, const vector<int> &doc, const vector<pair<int, int>> &seg, int a, int b, vector<Wrapped_CW> &res_cws) {
+    if (a + INTERVAL_LIMIT >= b)
+        return;
+
+    pair<int, int> ret(numeric_limits<int>::max(), -1);
+    int n = doc.size();
+    for (a += n, b += n; a <= b; ++a/=2, --b/=2) {
+      if (a%2 == 1) 
+        if (seg[a].first < ret.first)
+          ret = seg[a];
+      if (b%2 == 0) 
+        if (seg[b].first < ret.first)
+          ret = seg[b];
+    }
+
+    res_cws.emplace_back(doc[ret.second], doc_id, a, ret.second, b);
+    partition(doc_id, doc, seg, a, ret.second - 1, res_cws);
+    partition(doc_id, doc, seg, ret.second + 1, b, res_cws);
+}
+
+// get the compat windows of one document
+void generateCompatWindow(const int &doc_id, const vector<int> &doc, vector<pair<int, int>> &hf, int ith_hf, vector<Wrapped_CW> &res_cws, vector<pair<int, int>> &seg) {
+    assert(INTERVAL_LIMIT >= 1);
+
+    int n = doc.size();
+    if (seg.size() < 2 * n)
+      seg.resize(2 * n);
+
+    for (int i = 0; i < n; i++) {
+      seg[n + i].first = hval(hf, doc[i], ith_hf);
+      seg[n + i].second = i;
+    }
+
+    for (int i = n - 1; i; i--) 
+    {
+      if (seg[2 * i].first < seg[2 * i + 1].first)
+        seg[i] = seg[2 * i];
+      else
+        seg[i] = seg[2 * i + 1];
+    }
+
+    partition(doc_id, doc, hashValues, seg, 0, doc.size() - 1, res_cws);
+}
+//  Replace Testing 
+****************/
+
+/******************* Testing ******************/
+// Partition algorithm: In each recurrence, it will search and minimun element in current range and split the range into two pieces
+void partition(const int &doc_id, const vector<int> &doc, const vector<int> &hashValues, vector<pair<int,int>> &seg, int l, int r, vector<Wrapped_CW> &res_cws) {
     if (l + INTERVAL_LIMIT >= r)
         return;
 
@@ -25,20 +76,56 @@ void partition(const int &doc_id, const vector<int> &doc, const vector<int> &has
         }
     }
 
+    pair<int, int> ret(numeric_limits<int>::max(), -1);
+    int a = l;
+    int b = r;
+    int n = doc.size();
+    for (a += n, b += n; a <= b; ++a/=2, --b/=2) {
+      if (a%2 == 1) 
+        if (seg[a].first < ret.first)
+          ret = seg[a];
+      if (b%2 == 0) 
+        if (seg[b].first < ret.first)
+          ret = seg[b];
+    }
+    // dong: can you check this assertion? If it is correct, we can remove the hashValues part entirely and replace with the commented one;
+    assert(ret.first == minHash && ret.second == min_pos);
+
     res_cws.emplace_back(doc[min_pos], doc_id, l, min_pos, r);
     partition(doc_id, doc, hashValues, l, min_pos - 1, res_cws);
     partition(doc_id, doc, hashValues, min_pos + 1, r, res_cws);
 }
+/******************* Testing ******************/
 
 // get the compat windows of one document
-void generateCompatWindow(const int &doc_id, const vector<int> &doc, vector<pair<int, int>> &hf, int ith_hf, vector<Wrapped_CW> &res_cws) {
+void generateCompatWindow(const int &doc_id, const vector<int> &doc, vector<pair<int, int>> &hf, int ith_hf, vector<Wrapped_CW> &res_cws, vector<pair<int, int>> &seg) {
     assert(INTERVAL_LIMIT >= 1);
+
+    // the hashValues can be replaced by seg
     vector<int> hashValues(doc.size());
     for (int i = 0; i < doc.size(); i++) {
         hashValues[i] = hval(hf, doc[i], ith_hf);
     }
 
-    partition(doc_id, doc, hashValues, 0, doc.size() - 1, res_cws);
+    int n = doc.size();
+    if (seg.size() < 2 * n)
+      seg.resize(2 * n);
+
+    for (int i = 0; i < n; i++) 
+    {
+      seg[n + i].first = hashValues[i];
+      seg[n + i].second = i;
+    }
+
+    for (int i = n - 1; i; i--) 
+    {
+      if (seg[2 * i].first < seg[2 * i + 1].first)
+        seg[i] = seg[2 * i];
+      else
+        seg[i] = seg[2 * i + 1];
+    }
+
+    partition(doc_id, doc, hashValues, seg, 0, doc.size() - 1, res_cws);
 }
 
 // Todo: Build Index to memory
@@ -83,13 +170,17 @@ int main() {
 
     unsigned long long total_cws_amount = 0;
 
+    int thread_num = omp_get_max_threads();
+    vector<vector<pair<int, int>>> segtrees(thread_num, vector<int>(MAX_LENGTH));
+
     for (int i = 0; i < k; i++) {
         vector<Wrapped_CW> res_cws;
 #pragma omp parallel for
         for (int doc_id = 0; doc_id < docs.size(); doc_id++) {
             vector<Wrapped_CW> tmp_vetor;
 
-            generateCompatWindow(doc_id, docs[doc_id], hf, i, tmp_vetor);
+            int thread_id = omp_get_thread_num();
+            generateCompatWindow(doc_id, docs[doc_id], hf, i, tmp_vetor, segtrees[thread_id]);
 
 #pragma omp critical
             res_cws.insert(res_cws.end(), tmp_vetor.begin(), tmp_vetor.end());
