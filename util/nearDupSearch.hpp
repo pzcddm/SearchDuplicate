@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <unordered_set>
 #include <cassert>
-#include <execution>
+// #include <execution>
 
 using namespace std;
 
@@ -32,8 +32,8 @@ struct Point {
 
 // Line Sweep Algorithm for second dimension
 void lineSweep(vector<Point> &points, const int &thres, vector<pair<int, int>> &res_intervals) {
-    // sort(points.begin(), points.end());
-    sort(std::execution::par_unseq, points.begin(), points.end());
+    sort(points.begin(), points.end());
+    // sort(std::execution::par_unseq, points.begin(), points.end());
     unordered_set<int> ids;
 
     int pre_pos = -1;
@@ -84,8 +84,8 @@ void nearDupSearch(const vector<CW> &cw_vet, const int thres, vector<CW> &res, u
         points[i << 1 | 1] = Point(cw_vet[i].c + 1, 1, i); // Left closed and right open interval
     }
 
-    // sort(points.begin(), points.end());
-    sort(std::execution::par_unseq, points.begin(), points.end());
+    sort(points.begin(), points.end());
+    //sort(std::execution::par_unseq, points.begin(), points.end());
 
     // Line Sweep Algorithm
     unordered_set<int> ids;

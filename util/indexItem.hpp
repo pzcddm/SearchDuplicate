@@ -13,11 +13,18 @@ public:
         offset = 0;
     }
     
+    bool operator<(const IndexItem &tmp) const {
+        if (windowsNum == tmp.windowsNum) {
+            return offset < tmp.offset;
+        }
+        return windowsNum < tmp.windowsNum;
+    }
+
     void display() {
         printf("offset:%llu, windowsNUm: %d\n", offset, windowsNum);
     }
 
-    void getCompatWindows(string cw_files, vector<CW> & res_cws, int token_id){
+    void getCompatWindows(string cw_files, vector<CW> & res_cws){
         ifstream inFile(cw_files, ios::in | ios::binary); //二进制读方式打开
         if (!inFile) {
             cout << "error open file" << endl;

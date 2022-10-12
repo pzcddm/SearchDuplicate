@@ -20,6 +20,7 @@ public:
         c = tmp.c;
         r = tmp.r;
     }
+    
     bool operator<(const CW &tmp) const {
         if (T == tmp.T) {
             if (c == tmp.c) {

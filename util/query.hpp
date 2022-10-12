@@ -99,17 +99,19 @@ private:
         int thres = int(ceil(k * theta));
 
         assert(minHashesToken.size() == k);
+
+        vector<pair<IndexItem,int>> indexes(k);
         for (int i = 0; i < minHashesToken.size(); i++) {
             int token_id = minHashesToken[i];
             assert(token_id >= 0 && token_id < wordNum);
-            IndexItem &indexItem = indexArr[i][token_id];
-            vector<CW> cw_vet;
+            indexes[i] = make_pair(indexArr[i][token_id], i);
+            // vector<CW> cw_vet;
 
-            //load the corresponding cws file base on the current hash function
-            string cws_file = cws_dir + to_string(i) +".bin";
-            indexItem.getCompatWindows(cws_file, cw_vet, token_id);
+            // //load the corresponding cws file base on the current hash function
+            // string cws_file = cws_dir + to_string(i) +".bin";
+            // indexItem.getCompatWindows(cws_file, cw_vet, token_id);
 
-            cout<<"cws length "<<cw_vet.size()<<endl;
+            // cout<<"cws length "<<cw_vet.size()<<endl;
             // group them by their document id
             // for (auto &cw : cw_vet) {
             //     int doc_id = cw.T;
@@ -122,6 +124,15 @@ private:
             //         assert(groups[doc_id].size() > 0); // will delete (just to check)
             //     }
             // }
+        }
+
+        sort(indexes.begin(),indexes.end());
+        cout<<thres<<endl;
+        for (int i = 0; i < thres; i++) {
+            vector<CW> cw_vet;
+            string cws_file = cws_dir + to_string(indexes[i].second) +".bin";
+            indexes[i].first.getCompatWindows(cws_file, cw_vet);
+            cout<<"cws length "<<cw_vet.size()<<endl;
         }
 
         printf("This GroupT operation costs %f seconds\n", RepTime(timerOn));
