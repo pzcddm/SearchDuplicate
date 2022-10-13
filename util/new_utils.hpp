@@ -3,6 +3,21 @@
 #include "utils.hpp"
 #include <bits/stdc++.h>
 
+template<class T> 
+vector<unsigned> sort_index(vector<T> arr){
+    vector<pair<T,unsigned>> pair_arr(arr.size());
+    for(unsigned i = 0;i<pair_arr.size();i++){
+        pair_arr[i]=make_pair(arr[i],i);
+    }
+    sort(pair_arr.begin(),pair_arr.end());
+
+    vector<unsigned> res(arr.size());
+    for(unsigned i = 0;i<pair_arr.size();i++){
+        res[i]=pair_arr[i].second;
+    }
+    return res;
+}
+
 void seq2Int(string sequence, vector<int> &doc, vector<int> &offsets, unordered_map<string, int> &word2id, const unordered_set<string> &stopwords){
     const string delim = "\t\n\r\x0b\x0c !\"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~,.!?;";
 

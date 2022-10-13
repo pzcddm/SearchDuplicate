@@ -15,13 +15,12 @@ int INTERVAL_LIMIT;
 
 // Partition algorithm: In each recurrence, it will search and minimun element in current range and split the range into two pieces
 void partition(const int &doc_id, const vector<int> &doc, const vector<pair<int, int>> &seg, int l, int r, vector<vector<CW>> &res_cws) {
-
     if (l + INTERVAL_LIMIT >= r)
         return;
 
     pair<int, int> ret(numeric_limits<int>::max(), -1);
     int n = doc.size();
-    int a=l,b=r;
+    int a = l, b = r;
     for (a += n, b += n; a <= b; ++a /= 2, --b /= 2) {
         if (a % 2 == 1)
             if (seg[a].first < ret.first)
@@ -31,7 +30,7 @@ void partition(const int &doc_id, const vector<int> &doc, const vector<pair<int,
                 ret = seg[b];
     }
 
-    assert(doc[ret.second] >=0 && doc[ret.second]<64000);
+    assert(doc[ret.second] >= 0 && doc[ret.second] < 64000);
     res_cws[doc[ret.second]].emplace_back(doc_id, l, ret.second, r);
     partition(doc_id, doc, seg, l, ret.second - 1, res_cws);
     partition(doc_id, doc, seg, ret.second + 1, r, res_cws);
@@ -42,11 +41,10 @@ void generateCompatWindow(const int &doc_id, const vector<int> &doc, vector<pair
     assert(INTERVAL_LIMIT >= 1);
 
     int n = doc.size();
-    if (seg.size() < 2 * n){
+    if (seg.size() < 2 * n) {
         seg.resize(2 * n);
-        cout<<seg.size()<<endl;
+        cout << seg.size() << endl;
     }
-        
 
     for (int i = 0; i < n; i++) {
         seg[n + i].first = hval(hf, doc[i], ith_hf);
@@ -116,16 +114,16 @@ int main() {
     vector<vector<pair<int, int>>> segtrees(thread_num, vector<pair<int, int>>(MAX_LENGTH));
 
     for (int i = 0; i < k; i++) {
-    vector<vector<vector<CW>>> tmp_vetor(thread_num, vector<vector<CW>>(tokenNum)); // Three-dimensional(threads, tokens, compatwindows) arrays
+        vector<vector<vector<CW>>> tmp_vetor(thread_num, vector<vector<CW>>(tokenNum)); // Three-dimensional(threads, tokens, compatwindows) arrays
 
         // Genrate Compat windows under the current hash function
-#pragma omp parallel for 
+#pragma omp parallel for
         for (int doc_id = 0; doc_id < docs.size(); doc_id++) {
             int thread_id = omp_get_thread_num();
             generateCompatWindow(doc_id, docs[doc_id], hf, i, tmp_vetor[thread_id], segtrees[thread_id]);
         }
 
-        cout<<"hello"<<endl;
+        cout << "hello" << endl;
         // Merge inverted list generated from different threads and sort it
         vector<vector<CW>> res_cws(tokenNum);
 #pragma omp parallel for reduction(+ \
@@ -140,7 +138,22 @@ int main() {
             sort(res_cws[j].begin(), res_cws[j].end());
             total_cws_amount += res_cws[j].size();
         }
-        cout<<"Current cws amount:" <<total_cws_amount<<endl;
+        cout << "Current cws amount:" << total_cws_amount << endl;
+
+        // Get the longest cws and their corresponding token_id
+        vector<unsigned> cws_len(tokenNum);
+        for (int j = 0; j < tokenNum; j++) {
+            cws_len[j] = res_cws[j].size();
+        }
+        vector<unsigned> sorted_index = sort_index(cws_len);
+        vector<unsigned> longest_cws_tid(4000);
+        for (int i = 60000; i < tokenNum; i++) {
+            longest_cws_tid[i - 60000] = sorted_index[i];
+        }
+        sort(longest_cws_tid.begin(), longest_cws_tid.end()); // let this token id ordered
+        vector<vector<pair<int, unsigned long long>>> zonemap(4000);
+        int zonemp_cnt = 0;
+
         // Timer ON
         auto writingDiskTimer = LogTime();
 
@@ -148,21 +161,61 @@ int main() {
         string save_path = saved_dir + to_string(i) + ".bin";
         ofstream outFile(save_path, ios::out | ios::binary);
 
-        unsigned long long offset = 0; 
+        unsigned long long offset = 0;
         for (int j = 0; j < tokenNum; j++) {
+            if (j == longest_cws_tid[zonemp_cnt]) {
+                // create zoneMap[zonemp_cnt]
+                unsigned long long tmp_offset = offset;
+                int stride = 0;
+                int pre_text_id = -1;
+                for (auto const &cw : res_cws[j]) {
+                    if (stride == 0) {
+                        if (pre_text_id != cw.T) { // that means current cw is the first cw of its text
+                            zonemap[zonemp_cnt].emplace_back(cw.T, tmp_offset);
+                            stride = 10000;
+                        }
+                    }
+
+                    // update the pre cw's text id
+                    pre_text_id = cw.T;
+                    tmp_offset += sizeof(CW);
+                    stride = max(0, stride - 1);
+                }
+                zonemp_cnt++;
+            }
+
             for (auto const &cw : res_cws[j]) {
                 outFile.write((char *)&cw, sizeof(cw));
             }
             indexArr[i][j].windowsNum = res_cws[j].size();
             indexArr[i][j].offset = offset;
-            offset = offset + sizeof(CW)*indexArr[i][j].windowsNum;
+            offset = offset + sizeof(CW) * indexArr[i][j].windowsNum;
         }
         outFile.close();
+
+        // writing zonemap
+        string zonemap_path = "zonemap/openWebTextZP" + to_string(i) + ".bin";
+        ofstream zpFile(zonemap_path, ios::out | ios::binary);
+
+        for (int j = 0; j < longest_cws_tid.size(); j++) {
+            unsigned tid = longest_cws_tid[j];
+            unsigned zp_len = zonemap[j].size();
+
+            zpFile.write((char *)&tid, sizeof(unsigned));    // write token_id
+            zpFile.write((char *)&zp_len, sizeof(unsigned)); // write token_id
+
+            for (auto const &pir : zonemap[j]) {
+                zpFile.write((char *)&pir.first, sizeof(int));                 // write text_id
+                zpFile.write((char *)&pir.second, sizeof(unsigned long long)); // write offset
+            }
+        }
+        zpFile.close();
+
         // Timer Off
         writingDiskCost += RepTime(writingDiskTimer);
 
         cout << save_path << " Saved\n";
-        
+        cout << zonemap_path << " Saved\n";
     }
 
     cout << "total compat window amount: " << total_cws_amount << endl;
