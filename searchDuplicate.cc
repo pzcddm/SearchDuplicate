@@ -25,7 +25,7 @@ void prepareGlobalVariables(int k){
 
     cout << "total token amount: "<<wordNum << endl;
     // 写死, 用seed为0~k-1的随机种子生成的k个hash function 
-    for (int i = 0; i < k; i++) generateHashFunc(i, hashFunctions);
+    for (int i = 1; i <= k; i++) generateHashFunc(i, hashFunctions);
 }
 
 void loadIndexItem(int k, string index_file){

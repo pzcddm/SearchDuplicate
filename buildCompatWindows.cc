@@ -76,7 +76,7 @@ int main() {
 
     //写死, 用seed为0~k-1的随机种子生成的k个hash function
     vector<pair<int, int>> hf;
-    for (int i = 0; i < k; i++) generateHashFunc(i, hf);
+    for (int i = 1; i <= k; i++) generateHashFunc(i, hf);
 
     // Index Item
     IndexItem **indexArr;
