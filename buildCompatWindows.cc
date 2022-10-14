@@ -66,13 +66,15 @@ int main() {
     const string scr_dir = "../openwebtext_64K_vocal/";
     const string saved_dir = "compatWindows/openwebtext/";
     const string index_file = "index/indexOpenWebText.bin";
-
+    const string zoneMap_dir = "zonemap/openWebTextZP/";
+    
     const int tokenNum = 64000;
-    int k = 100; // the number of hash functions
-    // set the interval limit for generating compat windows
-    INTERVAL_LIMIT = 50;
+    int k = 100;                       // the number of hash functions
+    INTERVAL_LIMIT = 50;               // set the interval limit for generating compat windows
+    const int zonemp_interval = 10000; // the stride that decreasing when generating zonemap
+    const int zoneMpSize = 4000;       // the size of zonemaps under one hashfunction
 
-    //写死, 用seed为0~k-1的随机种子生成的k个hash function
+    //ht hash functions' seeds are 1 to k (cannot use 0 and 1 both together because their hash functions are the same)
     vector<pair<int, int>> hf;
     for (int i = 1; i <= k; i++) generateHashFunc(i, hf);
 
@@ -146,12 +148,13 @@ int main() {
             cws_len[j] = res_cws[j].size();
         }
         vector<unsigned> sorted_index = sort_index(cws_len);
-        vector<unsigned> longest_cws_tid(4000);
-        for (int i = 60000; i < tokenNum; i++) {
-            longest_cws_tid[i - 60000] = sorted_index[i];
+        vector<unsigned> longest_cws_tid(zoneMpSize);
+        int longestcws_cnt =0;
+        for (int i = tokenNum - zoneMpSize ; i < tokenNum; i++) {
+            longest_cws_tid[longestcws_cnt++] = sorted_index[i];
         }
         sort(longest_cws_tid.begin(), longest_cws_tid.end()); // let this token id ordered
-        vector<vector<pair<int, unsigned long long>>> zonemap(4000);
+        vector<vector<pair<int, unsigned long long>>> zonemap(zoneMpSize);
         int zonemp_cnt = 0;
 
         // Timer ON
@@ -172,7 +175,7 @@ int main() {
                     if (stride == 0) {
                         if (pre_text_id != cw.T) { // that means current cw is the first cw of its text
                             zonemap[zonemp_cnt].emplace_back(cw.T, tmp_offset);
-                            stride = 10000;
+                            stride = zonemp_interval;
                         }
                     }
 
@@ -194,7 +197,7 @@ int main() {
         outFile.close();
 
         // writing zonemap
-        string zonemap_path = "zonemap/openWebTextZP" + to_string(i) + ".bin";
+        string zonemap_path = zoneMap_dir + to_string(i) + ".bin";
         ofstream zpFile(zonemap_path, ios::out | ios::binary);
 
         for (int j = 0; j < longest_cws_tid.size(); j++) {
@@ -202,7 +205,7 @@ int main() {
             unsigned zp_len = zonemap[j].size();
 
             zpFile.write((char *)&tid, sizeof(unsigned));    // write token_id
-            zpFile.write((char *)&zp_len, sizeof(unsigned)); // write token_id
+            zpFile.write((char *)&zp_len, sizeof(unsigned)); // write length of current zonemap
 
             for (auto const &pir : zonemap[j]) {
                 zpFile.write((char *)&pir.first, sizeof(int));                 // write text_id

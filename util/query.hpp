@@ -3,7 +3,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
-#include <map>
+#include <unordered_map>
 #include <vector>
 #include <omp.h>
 
@@ -17,6 +17,9 @@ using namespace std;
 extern vector<pair<int, int>> hashFunctions;
 extern IndexItem **indexArr;
 extern int wordNum;
+extern int docNum;
+extern vector<map<unsigned, int>> tokenId2index;
+extern vector<vector<vector<pair<int, unsigned long long>>>> zoneMaps;
 
 class Query {
     vector<int> seqTokenized;
@@ -39,33 +42,35 @@ public:
 
         vector<CW> res;
         vector<int> minHashesToken(k);      // save the tokenid that has minHashValue with each hashfunction (its length should be k)
-        map<int, vector<CW>> doc_groups; // group CWs by their document id
+        unordered_map<int, vector<CW>> doc_groups; // group CWs by their document id
 
         // get these K minHashes of the query sequence
         getKMinHash(minHashesToken);
 
         // Group those compat window vectors by T (document id)
-        GroupT(doc_groups, minHashesToken);
+        vector<int> candidate_texts;
+        GroupT(doc_groups, minHashesToken, candidate_texts);
         int filtered_groupNum = 0;
         // Implement Find Subset algorithm to each group and filter those whose size is lower than ceil(theta*k)
         int thres = int(ceil(k * theta));
 
-        vector<map<int, vector<CW>>::iterator> its(doc_groups.size());
+        vector<unordered_map<int, vector<CW>>::iterator> its(doc_groups.size());
         int cnt=0;
         for(auto it =doc_groups.begin(); it!=doc_groups.end();it++){
             its[cnt++] = it;
         }
 
 #pragma omp parallel for
-        for (auto const & it  : its) {
+        for (auto const candid_tid  : candidate_texts) {
             // filter each group's size
-            if (it->second.size() < thres)
+            auto const & cw_vet = doc_groups[candid_tid];
+            if (cw_vet.size() < thres)
                 continue;
 
             filtered_groupNum++;
             // Implement LineSweep Algorithm to find the intersection of intervals and get the result
             vector<CW> tmp_res;
-            nearDupSearch(it->second, thres, res,winNum);
+            nearDupSearch(cw_vet, thres, tmp_res,winNum);
 #pragma omp critical
             res.insert(res.end(), tmp_res.begin(), tmp_res.end());
         }
@@ -92,7 +97,7 @@ private:
     }
 
     // Group those compat window vectors by T (document id)
-    void GroupT(map<int, vector<CW>> &groups, const vector<int> &minHashesToken) {
+    void GroupT(unordered_map<int, vector<CW>> &groups, const vector<int> &minHashesToken, vector<int> &candidate_texts) {
         auto timerOn = LogTime();
         // load the coresponding cw vectors of these K minHashes
         // and group them by document idw
@@ -127,14 +132,108 @@ private:
         }
 
         sort(indexes.begin(),indexes.end());
-        cout<<thres<<endl;
-        for (int i = 0; i < thres; i++) {
+        vector<int> groups_tokens(docNum);
+        for (int i = 0; i < 30; i++) {
             vector<CW> cw_vet;
             string cws_file = cws_dir + to_string(indexes[i].second) +".bin";
             indexes[i].first.getCompatWindows(cws_file, cw_vet);
             cout<<"cws length "<<cw_vet.size()<<endl;
+
+            int pre_docId =-1;
+            for (auto &cw : cw_vet) {
+                int doc_id = cw.T;
+
+                if (groups.count(doc_id)) {
+                    groups[doc_id].emplace_back(cw);
+                } else {
+                    vector<CW> &tmp_vet = groups[doc_id];
+                    tmp_vet.emplace_back(cw);
+                }
+
+                if(pre_docId != doc_id){
+                    groups_tokens[doc_id]++;
+                    pre_docId = doc_id;
+                }
+            }
         }
 
+        // get candidate texts
+        vector<unordered_map<int, vector<CW>>::iterator> its(groups.size());
+        int cnt=0;
+        for(auto it =groups.begin(); it!=groups.end();it++){
+            its[cnt++] = it;
+        }
+
+        int firstFileterNum = 0;
+#pragma omp parallel for 
+        for (auto const & it  : its) {
+            // filter each group's size
+            int doc_id = it->first;
+            if (groups_tokens[doc_id] < 10)
+                continue;
+            firstFileterNum++;
+            // Implement LineSweep Algorithm to find the intersection of intervals and get the result
+            vector<CW> tmp_res;
+            unsigned tmp_winNum =0;
+            nearDupSearch(it->second, 9, tmp_res,tmp_winNum);
+#pragma omp critical
+            if(tmp_res.size()!=0){
+                candidate_texts.emplace_back(doc_id);
+            }
+        }
+        cout<<"firstFileterNum"<<firstFileterNum<<endl;
+        printf("candidate_texts amount: %u\n",candidate_texts.size());
+
+        // iterate the left indexs and find there cws in candidates texts
+        for (int i = 31; i < k; i++) {
+            int ith_khash = indexes[i].second;
+            int token_id = minHashesToken[ith_khash];
+            string cws_file = cws_dir + to_string(ith_khash) +".bin";
+            ifstream inFile(cws_file, ios::in | ios::binary); //二进制读方式打开
+            if (!inFile) {
+                cout << "error open file" << endl;
+                return;
+            }
+            for(auto const & candid_text: candidate_texts){
+                // use zone map
+                const auto & zonemp = zoneMaps[ith_khash][tokenId2index[ith_khash][token_id]];
+
+                // find the first pair that larger than (candid_text,0ULL)
+                auto it = upper_bound(zonemp.begin(),zonemp.end(),make_pair(candid_text,0ULL));
+                if(it == zonemp.begin()){
+                    continue;
+                }
+                
+                it --;
+                pair<int, unsigned long long> val = *it;
+                assert(val.first<=candid_text);
+
+                unsigned long long offset = val.second;
+                inFile.seekg(offset,ios::beg);//把文件的写指针从文件开头向后移offset个字节
+                CW tmp_cw;
+                
+                vector<CW> text_cws;
+                // load compat windows under specified T
+                while(inFile.read((char *)&tmp_cw, sizeof(CW))){
+                    if(tmp_cw.T > candid_text){ //because the cw is ordered 
+                        break;
+                    }
+
+                    if(tmp_cw.T == candid_text){
+                        text_cws.emplace_back(tmp_cw);
+                    }
+                }
+                assert(text_cws.size()<30000);
+                if(text_cws.size()>0){
+                    cout<<"text_cws size"<<text_cws.size()<<endl;
+                }
+                assert(groups.count(candid_text));
+                for(auto const & cw:text_cws){
+                    groups[candid_text].emplace_back(cw);
+                }
+            }
+            inFile.close();
+        }
         printf("This GroupT operation costs %f seconds\n", RepTime(timerOn));
         printf("Groups Amount(Documents that minhashes corresponde): %lu\n", groups.size());
     }

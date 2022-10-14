@@ -1,7 +1,9 @@
 # data
 *.txt
 index
+zonemap
 py_script
+compatWindows
 CompatWindows
 indexFile
 dataset
