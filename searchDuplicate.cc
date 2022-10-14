@@ -20,6 +20,8 @@ IndexItem **indexArr;
 vector<map<unsigned, int>> tokenId2index;
 vector<vector<unsigned>> longTokenIds;
 vector<vector<vector<pair<int, unsigned long long>>>> zoneMaps;
+int zoneMpSize;
+
 vector<pair<int, int>> hashFunctions;
 int wordNum;
 int docNum;
@@ -35,41 +37,34 @@ void loadZoneMap(int max_k, string zonemap_dir) {
     zoneMaps.resize(max_k);
     tokenId2index.resize(max_k);
     for (int i = 0; i < max_k; i++) {
+        // open file
         string zonemapFile = zonemap_dir + to_string(i) + ".bin";
         ifstream inFile(zonemapFile, ios::in | ios::binary);
-        longTokenIds[i].resize(4000);
-        zoneMaps[i].resize(4000);
 
-        for (int j = 0; j < 4000; j++) {
+        longTokenIds[i].resize(zoneMpSize);
+        zoneMaps[i].resize(zoneMpSize);
+
+        for (int j = 0; j < zoneMpSize; j++) {
             unsigned tid;
             unsigned zp_len;
 
             inFile.read((char *)&tid, sizeof(unsigned));    // read token_id
             inFile.read((char *)&zp_len, sizeof(unsigned)); // read zonemap_length
             longTokenIds[i][j] = tid;
-            assert(tokenId2index[i].count(tid) == 0 );
-            tokenId2index[i][tid] = j;                      // map the tid to its position in zoneMaps[i]
+            assert(tokenId2index[i].count(tid) == 0);
+            tokenId2index[i][tid] = j; // map the tid to its position in zoneMaps[i]
             zoneMaps[i][j].resize(zp_len);
+
+            // load zoneMaps' textids and offsets
             for (int k = 0; k < zp_len; k++) {
                 inFile.read((char *)&zoneMaps[i][j][k].first, sizeof(int));                 // read text_id
                 inFile.read((char *)&zoneMaps[i][j][k].second, sizeof(unsigned long long)); // read offset
             }
         }
         inFile.close();
-
-        // for (int j = 0; j < 4000; j++) {
-        //     cout<<"one map:"<<endl;
-        //     cout<<longTokenIds[i][j]<<endl;//  = tid;
-        //     cout<<tokenId2index[i][longTokenIds[i][j]]<<endl;                      // map the tid to its position in zoneMaps[i]
-        //     for (int k = 0; k < zoneMaps[i][j].size(); k++) {
-        //         cout<<zoneMaps[i][j][k].first<<endl;
-        //         cout<<zoneMaps[i][j][k].second<<endl;
-
-        //     }
-        // }
-
     }
 }
+
 void loadIndexItem(int k, string index_file) {
     printf("------------------Loading Index File------------------\n");
     indexArr = new IndexItem *[k];
@@ -102,11 +97,14 @@ int reportPassagesNum(const vector<CW> &duplicateCWs) {
     return pasNum;
 }
 int main() {
-    int max_k = 100; // the maximum number of hash functions
-    wordNum = 64000; // the token amounts (vocabulary size)
-    int k = 100;     // the amount of hash functions intended to be used
-    docNum = 8013769;// the amount of texts
-    float theta = 0.9;
+    int max_k = 100;   // the maximum number of hash functions
+    wordNum = 64000;   // the token amounts (vocabulary size)
+    int k = 100;       // the amount of hash functions intended to be used
+    docNum = 8013769;  // the amount of texts
+    zoneMpSize = 4000; // the size of zonemaps under one hashfunction
+    int prefilter_size = 30;
+
+    float theta = 0.8;
     const string cw_dir = "compatWindows/openwebtext/";
     const string indexFile = "index/indexOpenWebText.bin";
     const string tokSeqFile = "../GenerationExperiment/tokenizeSeq/gpt2-small-seq.bin";
@@ -131,23 +129,12 @@ int main() {
 
     // Create query
     unsigned int windowsNum = 0;
-    Query query(tokenizedSeqs[0], theta, k, cw_dir);
+    Query query(tokenizedSeqs[0], theta, k, cw_dir, prefilter_size);
 
+    // Search near duplicate sentence
     vector<CW> duplicateCWs = query.getResult(windowsNum);
 
     printf("Report Total Windows Num: %u\n", windowsNum);
-    // // read words from source folder
-    // string src_path = "./dataset/test_byte/";
-    // string file_name = "test.bytes";
-    // vector<string> files; // store file_path of each document in the given folder
-    // loadFilesNameByBytes(file_name,src_path, files);
-
-    // // getFiles(src_path, files);
-    // for(auto const & cw : duplicateCWs){
-    //     cout<<"Document name: "<< files[cw.T]<<endl;
-    //     cw.display();
-    // }
-
     cout << "total founded passages amount: " << reportPassagesNum(duplicateCWs) << endl;
     cout << "total founded intervals amount: " << duplicateCWs.size() << endl;
 }

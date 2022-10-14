@@ -9,7 +9,7 @@ void loadBin(const string & binFileName, vector<vector<int>> & docs){
     while(ifs.read((char*)&size, sizeof(int))){
         vector<int> vec(size);
         ifs.read((char*)&vec[0], sizeof(int)*size);
-        docs.push_back(vec);
+        docs.emplace_back(vec);
     }
     ifs.close();
 }
