@@ -18,7 +18,7 @@ extern vector<pair<int, int>> hashFunctions;
 extern IndexItem **indexArr;
 extern int wordNum;
 extern int docNum;
-extern vector<map<unsigned, int>> tokenId2index;
+extern vector<unordered_map<unsigned, int>> tokenId2index;
 extern vector<vector<vector<pair<int, unsigned long long>>>> zoneMaps;
 
 class Query {
@@ -159,7 +159,7 @@ private:
             // Implement LineSweep Algorithm to find the intersection of intervals
             vector<CW> tmp_res;
             unsigned tmp_winNum = 0;
-            nearDupSearch(it->second, tmp_thres - 1, tmp_res, tmp_winNum);
+            nearDupSearch(it->second, tmp_thres, tmp_res, tmp_winNum);
 
 #pragma omp critical
             if (tmp_res.size() != 0) {

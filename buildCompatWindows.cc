@@ -64,17 +64,17 @@ void generateCompatWindow(const int &doc_id, const vector<int> &doc, vector<pair
 // Todo: Build Index to memory
 int main() {
     const string scr_dir = "../openwebtext_64K_vocal/";
-    const string saved_dir = "compatWindows/openwebtext/";
+    const string saved_dir = "compatWindows/openwebtext_64K_1000Gap/";
     const string index_file = "index/indexOpenWebText.bin";
-    const string zoneMap_dir = "zonemap/openWebTextZP/";
-    
+    const string zoneMap_dir = "zonemap/openWebTextZP_1000Gap_3000Size/";
+
     const int tokenNum = 64000;
     int k = 100;                       // the number of hash functions
     INTERVAL_LIMIT = 50;               // set the interval limit for generating compat windows
-    const int zonemp_interval = 10000; // the stride that decreasing when generating zonemap
-    const int zoneMpSize = 4000;       // the size of zonemaps under one hashfunction
+    const int zonemp_interval = 1000;  // the stride that decreasing when generating zonemap
+    const int zoneMpSize = 3000;       // the size of zonemaps under one hashfunction
 
-    //ht hash functions' seeds are 1 to k (cannot use 0 and 1 both together because their hash functions are the same)
+    //the hash functions' seeds are 1 to k (cannot use 0 and 1 both together because their hash functions are the same)
     vector<pair<int, int>> hf;
     for (int i = 1; i <= k; i++) generateHashFunc(i, hf);
 
@@ -224,10 +224,14 @@ int main() {
     cout << "total compat window amount: " << total_cws_amount << endl;
     printf("------------------Compat Windows Generated------------------\n");
     cout << "sort complete and write cws into file" << endl;
-    // Timer Off
 
-    cout << "Compat Windows Generation, Sorting, and Saving Time Cost: " << RepTime(start) << " Seconds\n";
+    // Timer Off
+    double total_time_cost = RepTime(start);
+    cout << "Setting Hash functions Amount: "<<k<<endl;
+    
+    cout << "Compat Windows Generation, Sorting, and Saving Time Cost: " << total_time_cost << " Seconds\n"; // this time cost doesn't not include the time cost of loading bin files
     cout << "Disk Writing Time Cost: " << writingDiskCost << " Seconds\n";
+    printf("Averaging over k disk IO time: %f  Computing time: %f\n", writingDiskCost/k, (total_time_cost-writingDiskCost)/k);
 
     printf("------------------Writing Index File------------------\n");
 

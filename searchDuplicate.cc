@@ -17,7 +17,7 @@ using namespace std;
 
 // global variables
 IndexItem **indexArr;
-vector<map<unsigned, int>> tokenId2index;
+vector<unordered_map<unsigned, int>> tokenId2index;
 vector<vector<unsigned>> longTokenIds;
 vector<vector<vector<pair<int, unsigned long long>>>> zoneMaps;
 int zoneMpSize;
@@ -28,7 +28,7 @@ int docNum;
 
 void prepareGlobalVariables(int k) {
     cout << "total token amount: " << wordNum << endl;
-    // 写死, 用seed为0~k-1的随机种子生成的k个hash function
+    //the hash functions' seeds are 1 to k (cannot use 0 and 1 both together because their hash functions are the same)
     for (int i = 1; i <= k; i++) generateHashFunc(i, hashFunctions);
 }
 
@@ -102,9 +102,9 @@ int main() {
     int k = 100;       // the amount of hash functions intended to be used
     docNum = 8013769;  // the amount of texts
     zoneMpSize = 4000; // the size of zonemaps under one hashfunction
-    int prefilter_size = 30;
+    int prefilter_size = 40;
 
-    float theta = 0.8;
+    float theta = 0.9;
     const string cw_dir = "compatWindows/openwebtext/";
     const string indexFile = "index/indexOpenWebText.bin";
     const string tokSeqFile = "../GenerationExperiment/tokenizeSeq/gpt2-small-seq.bin";
@@ -128,13 +128,16 @@ int main() {
     }
 
     // Create query
-    unsigned int windowsNum = 0;
-    Query query(tokenizedSeqs[0], theta, k, cw_dir, prefilter_size);
+    for(auto const & seq: tokenizedSeqs){
+        unsigned int windowsNum = 0;
+        Query query(seq, theta, k, cw_dir, prefilter_size);
 
-    // Search near duplicate sentence
-    vector<CW> duplicateCWs = query.getResult(windowsNum);
+        // Search near duplicate sentence
+        vector<CW> duplicateCWs = query.getResult(windowsNum);
 
-    printf("Report Total Windows Num: %u\n", windowsNum);
-    cout << "total founded passages amount: " << reportPassagesNum(duplicateCWs) << endl;
-    cout << "total founded intervals amount: " << duplicateCWs.size() << endl;
+        printf("Report Total Windows Num: %u\n", windowsNum);
+        cout << "founded passages amount: " << reportPassagesNum(duplicateCWs) << endl;
+        cout << "founded intervals amount: " << duplicateCWs.size() << endl;
+    }
+    
 }
