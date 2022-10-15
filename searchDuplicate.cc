@@ -112,21 +112,56 @@ void display_parameters(const int &tokenNum, const int &k, const int &T, const f
     printf("tokenNum: %d ,k: %d , T:%d , theta:%f, zoneMpSize: %d\n", tokenNum, k, T,theta, zoneMpSize);
 }
 
-int main() {
+int main(int argc, char **argv) {
     // Fixed parameters
-    const string dataset = "openwebtext";
-    const string tokSeqFile = "../gpt2output_64K_vocal/large-762M-k40.train.jsonl.bin";
+    string dataset = "openwebtext";
+    string tokSeqFile = "../gpt2output_64K_vocal/large-762M-k40.train.jsonl.bin";
     wordNum = 64000;   // the token amounts (vocabulary size)
     docNum = 8013769;  // the amount of texts
     zoneMpSize = 3000; // the size of zonemaps under one hashfunction
-    const int T = 50;  // the T used in generating compact windows
+    int T = 50;  // the T used in generating compact windows
 
-    const int sample_sequence_num = 50;
+    int sample_sequence_num = 50;
     int max_k = 64;             // the maximum number of hash functions
     int k = 16;                 // the amount of hash functions intended to be used
     double prefix_length = 0.2; // control prefix length
     float theta = 0.8;          // similarity threshold
     int prefilter_size = int(ceil(0.2 * k) + k * prefix_length);
+    
+    //load parameters
+    for (int i = 0; i < argc; i++){
+        string arg = argv[i];
+        if (arg == "-dataset"){
+            dataset = string(argv[i+1]);
+        }
+        if (arg == "-tokSeqFile"){
+            tokSeqFile = string(argv[i+1]);
+        }
+        if (arg == "-wordNum"){
+            wordNum = atoi(argv[i+1]);
+        }
+        if (arg == "-docNum"){
+            docNum = atoi(argv[i+1]);
+        }
+        if (arg == "-zoneMpSize"){
+            zoneMpSize = atoi(argv[i+1]);
+        }
+        if (arg == "-T"){
+            T = atoi(argv[i+1]);
+        }
+        if (arg == "-sample_sequence_num"){
+            sample_sequence_num = atoi(argv[i+1]);
+        }
+        if (arg == "-k"){
+            k = atoi(argv[i+1]);
+        }
+        if (arg == "-prefix_length"){
+            prefix_length = stod(string(argv[i+1]));
+        }
+        if (arg == "-theta"){
+            theta = atof(argv[i+1]);
+        }
+    }
 
     // get the data path
     string cw_dir, indexFile, zonemap_dir;
