@@ -87,7 +87,7 @@ void createSonDir(const string& root_path, string & cw_dir, string & index_file,
 
 // Todo: Build Index to memory
 int main(int argc, char **argv) {
-    const string scr_dir = "../openwebtext_64K_vocal/";
+    const string scr_dir = "/common/users/zp128/openwebtext_64K_vocal/";
     const string dataset_name = "openwebtext";
     tokenNum = 64000;
     int doc_limit = 8013769; //8013769
@@ -105,13 +105,13 @@ int main(int argc, char **argv) {
         if (arg == "-tokenNum"){
             tokenNum = atoi(argv[i+1]);
             if (tokenNum == 16000){
-                scr_dir = "../openwebtext_16K_vocal/";
+                scr_dir = "/common/users/zp128/openwebtext_16K_vocal/";
             } 
             if (tokenNum == 32000){
-                scr_dir = "../openwebtext_32K_vocal/";
+                scr_dir = "/common/users/zp128/openwebtext_32K_vocal/";
             } 
             if (tokenNum == 128000){
-                scr_dir = "../openwebtext_128K_vocal/";
+                scr_dir = "/common/users/zp128/openwebtext_128K_vocal/";
             } 
         }
         if (arg == "-k"){
