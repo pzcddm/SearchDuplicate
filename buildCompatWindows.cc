@@ -87,8 +87,8 @@ void createSonDir(const string& root_path, string & cw_dir, string & index_file,
 
 // Todo: Build Index to memory
 int main(int argc, char **argv) {
-    const string scr_dir = "/common/users/zp128/openwebtext_64K_vocal/";
-    const string dataset_name = "openwebtext";
+    string scr_dir = "/common/users/zp128/openwebtext_64K_vocal/";
+    string dataset_name = "openwebtext";
     tokenNum = 64000;
     int doc_limit = 8013769; //8013769
     int k = 64;                         // the number of hash functions
