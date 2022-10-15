@@ -107,6 +107,11 @@ int reportPassagesNum(const vector<CW> &duplicateCWs) {
     }
     return pasNum;
 }
+
+void display_parameters(const int &tokenNum, const int &k, const int &T, const float & theta, const int &zoneMpSize) {
+    printf("tokenNum: %d ,k: %d , T:%d , theta:%f, zoneMpSize: %d\n", tokenNum, k, T,theta, zoneMpSize);
+}
+
 int main() {
     // Fixed parameters
     const string dataset = "openwebtext";
@@ -116,11 +121,11 @@ int main() {
     zoneMpSize = 3000; // the size of zonemaps under one hashfunction
     const int T = 50;  // the T used in generating compact windows
 
-    const int sample_sequence_num = 100;
+    const int sample_sequence_num = 50;
     int max_k = 64;             // the maximum number of hash functions
-    int k = 64;                 // the amount of hash functions intended to be used
+    int k = 16;                 // the amount of hash functions intended to be used
     double prefix_length = 0.2; // control prefix length
-    float theta = 0.9;          // similarity threshold
+    float theta = 0.8;          // similarity threshold
     int prefilter_size = int(ceil(0.2 * k) + k * prefix_length);
 
     // get the data path
@@ -160,9 +165,9 @@ int main() {
         auto const &seq = tokenizedSeqs[randomNum[i]];
 
         // make sure the sequence length is long enough
-        if( seq.size()<k){
+        if (seq.size() < k) {
             sample_times++;
-            cout<<"Meet seq, skip "<<endl;
+            cout << "Meet seq, skip " << endl;
             continue;
         }
 
@@ -184,6 +189,7 @@ int main() {
         find_np_arr.emplace_back(np_passagesNum);
     }
 
-    cout << "Sequence Query Over" << endl;
-    printf(" memorized squences amount: %d  total_np_num: %d\n average query cost: %f average IO cost: ", find_num, total_np_num, total_query_time / sample_sequence_num, total_IO_time / sample_sequence_num);
+    cout << sample_sequence_num<< " Sequences Query Over" << endl;
+    display_parameters(wordNum,  k, T,theta, zoneMpSize); 
+    printf(" memorized squences amount: %d  total_np_num: %d\n average query cost: %f average IO cost: %f, average caculation cost: %f", find_num, total_np_num, total_query_time / sample_sequence_num, total_IO_time / sample_sequence_num, (total_query_time - total_IO_time) / sample_sequence_num);
 }
