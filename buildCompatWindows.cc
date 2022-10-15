@@ -65,22 +65,43 @@ void display_parameters(const int &tokenNum, const int &k, const int &T, const i
     printf("tokenNum: %d ,k: %d , T:%d , zonemap_interval: %d, zoneMpSize: %d\n", tokenNum, k, T, zonemap_interval, zoneMpSize);
 }
 
+string createRootDir(const int &tokenNum, const int &k, const int &T, const int &zoneMpSize, const string & dataset_name){
+    char root_dir_path[50];
+    sprintf(root_dir_path,"%s_%dK_%dk_%dT_%dM_%dZP",dataset_name.c_str(),tokenNum/1000,k,T,zoneMpSize);
+    mkdir(root_dir_path,S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
+
+    string str(root_dir_path);
+    return str;
+}
+
+void createSonDir(const string& root_path, string & cw_dir, string & index_file, string& zonemap_dir){
+    cw_dir = root_path+"/compatWindows/";
+    index_file = root_path+"/index.bin";
+    zonemap_dir = root_path+"/zonemap/";
+
+    // create directory for cw dir and zonemap_dir
+    mkdir(cw_dir.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO); 
+    mkdir(zonemap_dir.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
+    printf("Directory Made\n");
+}
 // Todo: Build Index to memory
 int main() {
     const string scr_dir = "../../openwebtext_64K_vocal/";
-    const string saved_dir = "compatWindows/openwebtext_64K_50T_800M/";
-    const string index_file = "index/indexOpenWebText_64K_50T_800M.bin";
-    const string zoneMap_dir = "zonemap/openWebTextZP_64K_50T_800M/";
-//create directory
-    mkdir(saved_dir.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO); 
-    mkdir(index_file.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO); 
-    mkdir(zoneMap_dir.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
+    const string dataset_name = "openwebtext";
     tokenNum = 64000;
     int k = 64;                       // the number of hash functions
     INTERVAL_LIMIT = 50;               // set the interval limit for generating compat windows
     const int zonemp_interval = 1000;  // the stride that decreasing when generating zonemap
     const int zoneMpSize = 3000;       // the size of zonemaps under one hashfunction
     int doc_limit = 8013769; //8013769
+
+    // Storage location of results and create them
+    string cw_dir;
+    string index_file;
+    string zoneMap_dir;
+    string root_dir = createRootDir(tokenNum, k,INTERVAL_LIMIT,zoneMpSize, dataset_name);
+    createSonDir(root_dir, cw_dir, index_file, zoneMap_dir);
+    
     //the hash functions' seeds are 1 to k (cannot use 0 and 1 both together because their hash functions are the same)
     vector<pair<int, int>> hf;
     for (int i = 1; i <= k; i++) generateHashFunc(i, hf);
@@ -167,7 +188,7 @@ int main() {
         auto writingDiskTimer = LogTime();
 
         // write these cws into a file
-        string save_path = saved_dir + to_string(i) + ".bin";
+        string save_path = cw_dir + to_string(i) + ".bin";
         ofstream outFile(save_path, ios::out | ios::binary);
 
         unsigned long long offset = 0;
