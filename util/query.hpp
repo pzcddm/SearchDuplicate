@@ -112,7 +112,10 @@ private:
 
         vector<pair<IndexItem, int>> indexes(k);
         for (int i = 0; i < minHashesToken.size(); i++) {
-            int token_id = minHashesToken[i];
+            int token_id = minHashesToken[i]; 
+            if(token_id<0||token_id >= wordNum){
+                cout<<"Error! token id Error"<<token_id<<endl;
+            }
             assert(token_id >= 0 && token_id < wordNum);
             indexes[i] = make_pair(indexArr[i][token_id], i);
         }
@@ -125,7 +128,7 @@ private:
             string cws_file = cws_dir + to_string(indexes[i].second) + ".bin";
             indexes[i].first.getCompatWindows(cws_file, cw_vet);
             IO_time += RepTime(timerOn);
-            cout << "cws length " << cw_vet.size() << endl;
+            // cout << "cws length " << cw_vet.size() << endl;
 
             int pre_docId = -1;
             for (auto &cw : cw_vet) {

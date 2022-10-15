@@ -108,8 +108,8 @@ int reportPassagesNum(const vector<CW> &duplicateCWs) {
     return pasNum;
 }
 
-void display_parameters(const int &tokenNum, const int &k, const int &T, const float & theta, const int &zoneMpSize) {
-    printf("tokenNum: %d ,k: %d , T:%d , theta:%f, zoneMpSize: %d\n", tokenNum, k, T,theta, zoneMpSize);
+void display_parameters(const int &tokenNum, const int &k, const int &T, const float & theta, const int &zoneMpSize, const int& fixed_prefixe) {
+    printf("tokenNum: %d ,k: %d , T:%d , theta:%f, zoneMpSize: %d fixed_prefix: %d \n", tokenNum, k, T,theta, zoneMpSize,fixed_prefixe);
 }
 
 int main(int argc, char **argv) {
@@ -119,11 +119,12 @@ int main(int argc, char **argv) {
     wordNum = 64000;   // the token amounts (vocabulary size)
     docNum = 8013769;  // the amount of texts
     zoneMpSize = 3000; // the size of zonemaps under one hashfunction
-    int T = 50;  // the T used in generating compact windows
+    int T = 100;  // the T used in generating compact windows
+    const int fixed_prefix = 64;
 
-    int sample_sequence_num = 50;
+    int sample_sequence_num = 1000;
     int max_k = 64;             // the maximum number of hash functions
-    int k = 16;                 // the amount of hash functions intended to be used
+    int k = 64;                 // the amount of hash functions intended to be used
     double prefix_length = 0.2; // control prefix length
     float theta = 0.8;          // similarity threshold
     int prefilter_size = int(ceil(0.2 * k) + k * prefix_length);
@@ -163,6 +164,7 @@ int main(int argc, char **argv) {
         }
     }
 
+    display_parameters(wordNum,  k, T,theta, zoneMpSize, fixed_prefix); 
     // get the data path
     string cw_dir, indexFile, zonemap_dir;
     string root_dir = getRootDir(wordNum, max_k, T, docNum, zoneMpSize, dataset);
@@ -187,6 +189,7 @@ int main(int argc, char **argv) {
     for (int i = 0; i < tokenizedSeqs.size(); i++) {
         randomNum[i] = i;
     }
+    srand(time(0));
     random_shuffle(randomNum, randomNum + tokenizedSeqs.size());
 
     int find_num = 0;     // the num of those sequences have near dup
@@ -194,17 +197,24 @@ int main(int argc, char **argv) {
     vector<int> find_np_arr;
     double total_query_time = 0;
     double total_IO_time = 0;
+    map<int,int> mp;
     // Create query
     int sample_times = sample_sequence_num;
-    for (int i = 0; i < sample_times; i++) {
-        auto const &seq = tokenizedSeqs[randomNum[i]];
 
+    int token_len_thres=max(k,fixed_prefix);
+    for (int i = 0; i < sample_times; i++) {
+        auto &raw_seq = tokenizedSeqs[randomNum[i]];
+        
         // make sure the sequence length is long enough
-        if (seq.size() < k) {
+        if (raw_seq.size() < token_len_thres) {
             sample_times++;
-            cout << "Meet seq, skip " << endl;
+            cout << "Meet short seq, skip " << endl;
             continue;
         }
+
+        vector<int> seq;
+        //Intercept prefix
+        seq.assign(raw_seq.begin(),raw_seq.begin()+fixed_prefix);
 
         double query_time;
         unsigned int windowsNum = 0;
@@ -216,15 +226,20 @@ int main(int argc, char **argv) {
         int np_passagesNum = reportPassagesNum(duplicateCWs);
         printf("Report Total Windows Num: %u\n", windowsNum);
         cout << "founded passages amount: " << np_passagesNum << endl;
-        cout << "founded intervals amount: " << duplicateCWs.size() << endl;
+        cout << "founded intervals amount: \n" << duplicateCWs.size() << endl;
 
         total_query_time += query_time;
         find_num += np_passagesNum ? 1 : 0;
+        mp[np_passagesNum]++;
         total_np_num += np_passagesNum;
         find_np_arr.emplace_back(np_passagesNum);
     }
 
+    for(auto const& it:mp){
+        printf("np: %d value: %d\n",it.first, it.second);
+    }
+    cout<<tokSeqFile<<endl;
     cout << sample_sequence_num<< " Sequences Query Over" << endl;
-    display_parameters(wordNum,  k, T,theta, zoneMpSize); 
+    display_parameters(wordNum,  k, T,theta, zoneMpSize, fixed_prefix); 
     printf(" memorized squences amount: %d  total_np_num: %d\n average query cost: %f average IO cost: %f, average caculation cost: %f", find_num, total_np_num, total_query_time / sample_sequence_num, total_IO_time / sample_sequence_num, (total_query_time - total_IO_time) / sample_sequence_num);
 }

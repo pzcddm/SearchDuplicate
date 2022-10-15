@@ -87,12 +87,12 @@ void createSonDir(const string& root_path, string & cw_dir, string & index_file,
 
 // Todo: Build Index to memory
 int main(int argc, char **argv) {
-    string scr_dir = "/common/users/zp128/openwebtext_64K_vocal/";
+    string scr_dir = "../openwebtext_64K_vocal/";
     string dataset_name = "openwebtext";
     tokenNum = 64000;
     int doc_limit = 8013769; //8013769
     int k = 64;                         // the number of hash functions
-    INTERVAL_LIMIT = 100;               // set the interval limit for generating compat windows
+    INTERVAL_LIMIT = 25;               // set the interval limit for generating compat windows
     const int zonemp_interval = 1000;  // the stride that decreasing when generating zonemap
     const int zoneMpSize = 3000;       // the size of zonemaps under one hashfunction
     
