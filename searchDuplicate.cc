@@ -82,12 +82,12 @@ void loadIndexItem(int k, string index_file) {
     for (int i = 0; i < k; i++) {
         for (int j = 0; j < wordNum; j++) {
             inFile.read((char *)&indexArr[i][j], sizeof(IndexItem));
-	    if(indexArr[i][j].windowsNum<0){
-		    cout<<i<<" "<<j<<endl;
-		    cout<<indexArr[i][j].windowsNum<<" "<<indexArr[i][j].offset<<endl;
-	    }
+            if (indexArr[i][j].windowsNum < 0) {
+                cout << i << " " << j << endl;
+                cout << indexArr[i][j].windowsNum << " " << indexArr[i][j].offset << endl;
+            }
 
-	    assert(indexArr[i][j].windowsNum>=0);
+            assert(indexArr[i][j].windowsNum >= 0);
         }
     }
     inFile.close();
@@ -109,22 +109,25 @@ int reportPassagesNum(const vector<CW> &duplicateCWs) {
 }
 int main() {
     // Fixed parameters
+    const string dataset = "openwebtext";
+    const string tokSeqFile = "../gpt2output_64K_vocal/large-762M-k40.train.jsonl.bin";
     wordNum = 64000;   // the token amounts (vocabulary size)
     docNum = 8013769;  // the amount of texts
     zoneMpSize = 3000; // the size of zonemaps under one hashfunction
+    const int T = 50;  // the T used in generating compact windows
+
     const int sample_sequence_num = 100;
+    int max_k = 64;             // the maximum number of hash functions
+    int k = 64;                 // the amount of hash functions intended to be used
+    double prefix_length = 0.2; // control prefix length
+    float theta = 0.9;          // similarity threshold
+    int prefilter_size = int(ceil(0.2 * k) + k * prefix_length);
 
-    int max_k = 64;   // the maximum number of hash functions
-    int k = 64;       // the amount of hash functions intended to be used
-    double prefix_length = 0.2; // control prefix length 
-    float theta = 0.9; // similarity threshold
-    int prefilter_size = int(ceil(0.2 *k)  + k * prefix_length);
-    
+    // get the data path
+    string cw_dir, indexFile, zonemap_dir;
+    string root_dir = getRootDir(wordNum, max_k, T, docNum, zoneMpSize, dataset);
+    getSonDir(root_dir, cw_dir, indexFile, zonemap_dir);
 
-    const string cw_dir = "compatWindows/openwebtext_64K_50T_800M/";
-    const string indexFile = "index/indexOpenWebText_64K_50T_800M.bin";
-    const string tokSeqFile = "../../gpt2output_64K_vocal/large-762M-k40.train.jsonl.bin";
-    const string zonemap_dir = "zonemap/openWebTextZP_64K_50T_800M/";
     // load the tokenized sequences
     vector<vector<int>> tokenizedSeqs;
     loadBin(tokSeqFile, tokenizedSeqs);
@@ -150,21 +153,26 @@ int main() {
     int total_np_num = 0; // the num of finding np
     vector<int> find_np_arr;
     double total_query_time = 0;
-    
+    double total_IO_time = 0;
     // Create query
-    for (int i = 0; i < sample_sequence_num; i++) {
+    int sample_times = sample_sequence_num;
+    for (int i = 0; i < sample_times; i++) {
         auto const &seq = tokenizedSeqs[randomNum[i]];
 
         // make sure the sequence length is long enough
-        assert(seq.size() >= k);
+        if( seq.size()<k){
+            sample_times++;
+            cout<<"Meet seq, skip "<<endl;
+            continue;
+        }
 
         double query_time;
         unsigned int windowsNum = 0;
         Query query(seq, theta, k, cw_dir, prefilter_size);
 
         // Search near duplicate sentence
-        vector<CW> duplicateCWs = query.getResult(windowsNum,query_time);
-
+        vector<CW> duplicateCWs = query.getResult(windowsNum, query_time);
+        total_IO_time += query.getIOtime();
         int np_passagesNum = reportPassagesNum(duplicateCWs);
         printf("Report Total Windows Num: %u\n", windowsNum);
         cout << "founded passages amount: " << np_passagesNum << endl;
@@ -177,5 +185,5 @@ int main() {
     }
 
     cout << "Sequence Query Over" << endl;
-    printf(" memorized squences amount: %d  total_np_num: %d\n average query cost: %f", find_num, total_np_num, total_query_time/sample_sequence_num);
+    printf(" memorized squences amount: %d  total_np_num: %d\n average query cost: %f average IO cost: ", find_num, total_np_num, total_query_time / sample_sequence_num, total_IO_time / sample_sequence_num);
 }

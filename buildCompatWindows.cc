@@ -65,9 +65,9 @@ void display_parameters(const int &tokenNum, const int &k, const int &T, const i
     printf("tokenNum: %d ,k: %d , T:%d , zonemap_interval: %d, zoneMpSize: %d\n", tokenNum, k, T, zonemap_interval, zoneMpSize);
 }
 
-string createRootDir(const int &tokenNum, const int &k, const int &T, const int &zoneMpSize, const string & dataset_name){
+string createRootDir(const int &tokenNum, const int &k, const int &T, const int & doc_lim,  const int &zoneMpSize, const string & dataset_name){
     char root_dir_path[50];
-    sprintf(root_dir_path,"%s_%dK_%dk_%dT_%dM_%dZP",dataset_name.c_str(),tokenNum/1000,k,T,zoneMpSize);
+    sprintf(root_dir_path,"%s_%dK_%dk_%dT_%dM_%dZP",dataset_name.c_str(),tokenNum/1000,k,T,doc_lim/1000000, zoneMpSize);
     mkdir(root_dir_path,S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
 
     string str(root_dir_path);
@@ -84,12 +84,13 @@ void createSonDir(const string& root_path, string & cw_dir, string & index_file,
     mkdir(zonemap_dir.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
     printf("Directory Made\n");
 }
+
 // Todo: Build Index to memory
 int main() {
-    const string scr_dir = "../../openwebtext_64K_vocal/";
+    const string scr_dir = "../openwebtext_64K_vocal/";
     const string dataset_name = "openwebtext";
     tokenNum = 64000;
-    int k = 64;                       // the number of hash functions
+    int k = 64;                         // the number of hash functions
     INTERVAL_LIMIT = 50;               // set the interval limit for generating compat windows
     const int zonemp_interval = 1000;  // the stride that decreasing when generating zonemap
     const int zoneMpSize = 3000;       // the size of zonemaps under one hashfunction
@@ -99,7 +100,7 @@ int main() {
     string cw_dir;
     string index_file;
     string zoneMap_dir;
-    string root_dir = createRootDir(tokenNum, k,INTERVAL_LIMIT,zoneMpSize, dataset_name);
+    string root_dir = createRootDir(tokenNum, k,INTERVAL_LIMIT,doc_limit, zoneMpSize, dataset_name);
     createSonDir(root_dir, cw_dir, index_file, zoneMap_dir);
     
     //the hash functions' seeds are 1 to k (cannot use 0 and 1 both together because their hash functions are the same)
@@ -152,7 +153,7 @@ int main() {
             generateCompatWindow(doc_id, docs[doc_id], hf, i, tmp_vetor[thread_id], segtrees[thread_id]);
         }
 
-        cout << "hello" << endl;
+        cout << "Partition Algo Over" << endl;
         // Merge inverted list generated from different threads and sort it
         vector<vector<CW>> res_cws(tokenNum);
 #pragma omp parallel for reduction(+ \
@@ -224,6 +225,7 @@ int main() {
         outFile.close();
 
         // writing zonemap
+        cout<<"Zone map writing"<<endl;
         string zonemap_path = zoneMap_dir + to_string(i) + ".bin";
         ofstream zpFile(zonemap_path, ios::out | ios::binary);
 

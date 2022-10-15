@@ -27,6 +27,8 @@ class Query {
     int k;              // the num of hash functions that use
     string cws_dir;     // the directory path of cws
     int prefilter_size; // the size of smallest compat windows vectors loaded into prefilter
+private:
+    double IO_time = 0;
 public:
     Query() {
     }
@@ -36,6 +38,7 @@ public:
         assert(theta <= 1.0);
     }
 
+    double getIOtime(){ return IO_time;}
     vector<CW> getResult(unsigned int &winNum, double &query_time) {
         // Timer on
         auto timerOn = LogTime();
@@ -113,13 +116,15 @@ private:
             assert(token_id >= 0 && token_id < wordNum);
             indexes[i] = make_pair(indexArr[i][token_id], i);
         }
-	cout<<"hello"<<endl;
+	    cout<<"hello"<<endl;
         sort(indexes.begin(), indexes.end());
         vector<int> groups_tokens(docNum);
         for (int i = 0; i < prefilter_size; i++) {
+            auto timerOn = LogTime();
             vector<CW> cw_vet;
             string cws_file = cws_dir + to_string(indexes[i].second) + ".bin";
             indexes[i].first.getCompatWindows(cws_file, cw_vet);
+            IO_time += RepTime(timerOn);
             cout << "cws length " << cw_vet.size() << endl;
 
             int pre_docId = -1;
@@ -139,7 +144,7 @@ private:
                 }
             }
         }
-cout<<"heelo";
+
         // get candidate texts
         vector<unordered_map<int, vector<CW>>::iterator> its(groups.size());
         int cnt = 0;
@@ -202,6 +207,7 @@ cout<<"heelo";
 
                 vector<CW> text_cws;
                 // load compat windows under specified T
+                auto timerOn = LogTime();
                 while (inFile.read((char *)&tmp_cw, sizeof(CW))) {
                     if (tmp_cw.T > candid_text) { // because the cw is ordered
                         break;
@@ -211,6 +217,7 @@ cout<<"heelo";
                         text_cws.emplace_back(tmp_cw);
                     }
                 }
+                IO_time += RepTime(timerOn);
                 assert(text_cws.size() < 50000); // the amount of compact windows in one text of one token normally is  low (lower than 1e4)
                 // if(text_cws.size()>0){
                 //     cout<<"text_cws size"<<text_cws.size()<<endl;
