@@ -32,7 +32,10 @@ public:
         }
 
         inFile.seekg(offset,ios::beg);//把文件的写指针从文件开头向后移offset个字节
-
+	if(windowsNum<0){
+		cout<<windowsNum<<endl;
+	}
+	assert(windowsNum>=0);
         res_cws.resize(windowsNum);
         inFile.read((char *)&res_cws[0], sizeof(CW)*windowsNum);
         inFile.close();

@@ -36,7 +36,7 @@ public:
         assert(theta <= 1.0);
     }
 
-    vector<CW> getResult(unsigned int &winNum) {
+    vector<CW> getResult(unsigned int &winNum, double &query_time) {
         // Timer on
         auto timerOn = LogTime();
 
@@ -76,7 +76,8 @@ public:
         }
 
         printf("Filtered Groups Amount: %d\n", filtered_groupNum);
-        printf("This query operation costs %f seconds\n", RepTime(timerOn));
+        query_time = RepTime(timerOn);
+        printf("This query operation costs %f seconds\n", query_time);
         return res;
     }
 
@@ -92,6 +93,7 @@ private:
             // Get minHash of current hashfunction
             int minValuePos = min_element(hashValues.begin(), hashValues.end()) - hashValues.begin();
             minHashesToken[i] = seqTokenized[minValuePos];
+	    assert(minHashesToken[i]>=0);
         }
         printf("------------------MinHashesToken Generated------------------\n");
     }
@@ -111,7 +113,7 @@ private:
             assert(token_id >= 0 && token_id < wordNum);
             indexes[i] = make_pair(indexArr[i][token_id], i);
         }
-
+	cout<<"hello"<<endl;
         sort(indexes.begin(), indexes.end());
         vector<int> groups_tokens(docNum);
         for (int i = 0; i < prefilter_size; i++) {
@@ -137,7 +139,7 @@ private:
                 }
             }
         }
-
+cout<<"heelo";
         // get candidate texts
         vector<unordered_map<int, vector<CW>>::iterator> its(groups.size());
         int cnt = 0;

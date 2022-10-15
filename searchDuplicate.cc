@@ -28,7 +28,7 @@ int docNum;
 
 void prepareGlobalVariables(int k) {
     cout << "total token amount: " << wordNum << endl;
-    //the hash functions' seeds are 1 to k (cannot use 0 and 1 both together because their hash functions are the same)
+    // the hash functions' seeds are 1 to k (cannot use 0 and 1 both together because their hash functions are the same)
     for (int i = 1; i <= k; i++) generateHashFunc(i, hashFunctions);
 }
 
@@ -74,9 +74,20 @@ void loadIndexItem(int k, string index_file) {
     }
 
     ifstream inFile(index_file, ios::in | ios::binary);
+    if (!inFile) {
+        cout << "error open index file" << endl;
+        return;
+    }
+
     for (int i = 0; i < k; i++) {
         for (int j = 0; j < wordNum; j++) {
             inFile.read((char *)&indexArr[i][j], sizeof(IndexItem));
+	    if(indexArr[i][j].windowsNum<0){
+		    cout<<i<<" "<<j<<endl;
+		    cout<<indexArr[i][j].windowsNum<<" "<<indexArr[i][j].offset<<endl;
+	    }
+
+	    assert(indexArr[i][j].windowsNum>=0);
         }
     }
     inFile.close();
@@ -97,18 +108,23 @@ int reportPassagesNum(const vector<CW> &duplicateCWs) {
     return pasNum;
 }
 int main() {
-    int max_k = 100;   // the maximum number of hash functions
+    // Fixed parameters
     wordNum = 64000;   // the token amounts (vocabulary size)
-    int k = 100;       // the amount of hash functions intended to be used
     docNum = 8013769;  // the amount of texts
-    zoneMpSize = 4000; // the size of zonemaps under one hashfunction
-    int prefilter_size = 40;
+    zoneMpSize = 3000; // the size of zonemaps under one hashfunction
+    const int sample_sequence_num = 100;
 
-    float theta = 0.9;
-    const string cw_dir = "compatWindows/openwebtext/";
-    const string indexFile = "index/indexOpenWebText.bin";
-    const string tokSeqFile = "../GenerationExperiment/tokenizeSeq/gpt2-small-seq.bin";
-    const string zonemap_dir = "zonemap/openWebTextZP/";
+    int max_k = 64;   // the maximum number of hash functions
+    int k = 64;       // the amount of hash functions intended to be used
+    double prefix_length = 0.2; // control prefix length 
+    float theta = 0.9; // similarity threshold
+    int prefilter_size = int(ceil(0.2 *k)  + k * prefix_length);
+    
+
+    const string cw_dir = "compatWindows/openwebtext_64K_50T_800M/";
+    const string indexFile = "index/indexOpenWebText_64K_50T_800M.bin";
+    const string tokSeqFile = "../../gpt2output_64K_vocal/large-762M-k40.train.jsonl.bin";
+    const string zonemap_dir = "zonemap/openWebTextZP_64K_50T_800M/";
     // load the tokenized sequences
     vector<vector<int>> tokenizedSeqs;
     loadBin(tokSeqFile, tokenizedSeqs);
@@ -121,23 +137,45 @@ int main() {
     // load the IndexItem
     loadIndexItem(max_k, indexFile);
 
-    cout << "tokenized seq Num" << tokenizedSeqs[0].size() << endl;
+    cout << "first tokenized seq Num" << tokenizedSeqs[0].size() << endl;
 
-    if (tokenizedSeqs[0].size() < k) {
-        cout << "error the tokenized sequence length is smaller than k!" << endl;
+    // create random shuffle array to random sample the tokenizeSeq
+    int *randomNum = new int[tokenizedSeqs.size()];
+    for (int i = 0; i < tokenizedSeqs.size(); i++) {
+        randomNum[i] = i;
     }
+    random_shuffle(randomNum, randomNum + tokenizedSeqs.size());
 
+    int find_num = 0;     // the num of those sequences have near dup
+    int total_np_num = 0; // the num of finding np
+    vector<int> find_np_arr;
+    double total_query_time = 0;
+    
     // Create query
-    for(auto const & seq: tokenizedSeqs){
+    for (int i = 0; i < sample_sequence_num; i++) {
+        auto const &seq = tokenizedSeqs[randomNum[i]];
+
+        // make sure the sequence length is long enough
+        assert(seq.size() >= k);
+
+        double query_time;
         unsigned int windowsNum = 0;
         Query query(seq, theta, k, cw_dir, prefilter_size);
 
         // Search near duplicate sentence
-        vector<CW> duplicateCWs = query.getResult(windowsNum);
+        vector<CW> duplicateCWs = query.getResult(windowsNum,query_time);
 
+        int np_passagesNum = reportPassagesNum(duplicateCWs);
         printf("Report Total Windows Num: %u\n", windowsNum);
-        cout << "founded passages amount: " << reportPassagesNum(duplicateCWs) << endl;
+        cout << "founded passages amount: " << np_passagesNum << endl;
         cout << "founded intervals amount: " << duplicateCWs.size() << endl;
+
+        total_query_time += query_time;
+        find_num += np_passagesNum ? 1 : 0;
+        total_np_num += np_passagesNum;
+        find_np_arr.emplace_back(np_passagesNum);
     }
-    
+
+    cout << "Sequence Query Over" << endl;
+    printf(" memorized squences amount: %d  total_np_num: %d\n average query cost: %f", find_num, total_np_num, total_query_time/sample_sequence_num);
 }

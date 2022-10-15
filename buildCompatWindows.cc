@@ -10,6 +10,7 @@
 #include "util/indexItem.hpp"
 
 int INTERVAL_LIMIT;
+int tokenNum;
 
 #define MAX_LENGTH 2000000
 
@@ -30,7 +31,7 @@ void partition(const int &doc_id, const vector<int> &doc, const vector<pair<int,
                 ret = seg[b];
     }
 
-    assert(doc[ret.second] >= 0 && doc[ret.second] < 64000);
+    assert(doc[ret.second] >= 0 && doc[ret.second] < tokenNum);
     res_cws[doc[ret.second]].emplace_back(doc_id, l, ret.second, r);
     partition(doc_id, doc, seg, l, ret.second - 1, res_cws);
     partition(doc_id, doc, seg, ret.second + 1, r, res_cws);
@@ -60,20 +61,26 @@ void generateCompatWindow(const int &doc_id, const vector<int> &doc, vector<pair
 
     partition(doc_id, doc, seg, 0, doc.size() - 1, res_cws);
 }
+void display_parameters(const int &tokenNum, const int &k, const int &T, const int &zonemap_interval, const int &zoneMpSize) {
+    printf("tokenNum: %d ,k: %d , T:%d , zonemap_interval: %d, zoneMpSize: %d\n", tokenNum, k, T, zonemap_interval, zoneMpSize);
+}
 
 // Todo: Build Index to memory
 int main() {
-    const string scr_dir = "../openwebtext_64K_vocal/";
-    const string saved_dir = "compatWindows/openwebtext_64K_1000Gap/";
-    const string index_file = "index/indexOpenWebText.bin";
-    const string zoneMap_dir = "zonemap/openWebTextZP_1000Gap_3000Size/";
-
-    const int tokenNum = 64000;
-    int k = 100;                       // the number of hash functions
+    const string scr_dir = "../../openwebtext_64K_vocal/";
+    const string saved_dir = "compatWindows/openwebtext_64K_50T_800M/";
+    const string index_file = "index/indexOpenWebText_64K_50T_800M.bin";
+    const string zoneMap_dir = "zonemap/openWebTextZP_64K_50T_800M/";
+//create directory
+    mkdir(saved_dir.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO); 
+    mkdir(index_file.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO); 
+    mkdir(zoneMap_dir.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
+    tokenNum = 64000;
+    int k = 64;                       // the number of hash functions
     INTERVAL_LIMIT = 50;               // set the interval limit for generating compat windows
     const int zonemp_interval = 1000;  // the stride that decreasing when generating zonemap
     const int zoneMpSize = 3000;       // the size of zonemaps under one hashfunction
-
+    int doc_limit = 8013769; //8013769
     //the hash functions' seeds are 1 to k (cannot use 0 and 1 both together because their hash functions are the same)
     vector<pair<int, int>> hf;
     for (int i = 1; i <= k; i++) generateHashFunc(i, hf);
@@ -117,10 +124,9 @@ int main() {
 
     for (int i = 0; i < k; i++) {
         vector<vector<vector<CW>>> tmp_vetor(thread_num, vector<vector<CW>>(tokenNum)); // Three-dimensional(threads, tokens, compatwindows) arrays
-
         // Genrate Compat windows under the current hash function
 #pragma omp parallel for
-        for (int doc_id = 0; doc_id < docs.size(); doc_id++) {
+        for (int doc_id = 0; doc_id < doc_limit; doc_id++) {
             int thread_id = omp_get_thread_num();
             generateCompatWindow(doc_id, docs[doc_id], hf, i, tmp_vetor[thread_id], segtrees[thread_id]);
         }
@@ -228,10 +234,10 @@ int main() {
     // Timer Off
     double total_time_cost = RepTime(start);
     cout << "Setting Hash functions Amount: "<<k<<endl;
-    
+    display_parameters(tokenNum,  k, INTERVAL_LIMIT, zonemp_interval, zoneMpSize); 
     cout << "Compat Windows Generation, Sorting, and Saving Time Cost: " << total_time_cost << " Seconds\n"; // this time cost doesn't not include the time cost of loading bin files
     cout << "Disk Writing Time Cost: " << writingDiskCost << " Seconds\n";
-    printf("Averaging over k disk IO time: %f  Computing time: %f\n", writingDiskCost/k, (total_time_cost-writingDiskCost)/k);
+    printf("Averaging over k disk IO time: %f  Computing time: %f compact windows amount: %f\n", writingDiskCost/k, (total_time_cost-writingDiskCost)/k, total_cws_amount*1.0/k);
 
     printf("------------------Writing Index File------------------\n");
 
