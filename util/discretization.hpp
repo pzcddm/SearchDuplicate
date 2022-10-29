@@ -41,7 +41,7 @@ class Discret{
     }
 
     int rev_discret(const int & value){
-        assert(value<arr.size());
-        return arr[value];
+        assert(value<=arr.size());
+        return arr[value-1];
     }
 };

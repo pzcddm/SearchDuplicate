@@ -11,6 +11,7 @@
 #include "new_utils.hpp"
 #include "utils.hpp"
 // #include "nearDupSearch.hpp"
+#include "segmentTree.hpp"
 #include "nearDupSearchFaster.hpp"
 
 using namespace std;
@@ -184,6 +185,8 @@ private:
             // Implement LineSweep Algorithm to find the intersection of intervals
             vector<CW> tmp_res;
             unsigned tmp_winNum = 0;
+            
+            // nearDupSearch(it->second, tmp_thres, tmp_res, tmp_winNum);
             int thread_id = omp_get_thread_num();
             nearDupSearchFaster(it->second, tmp_thres, tmp_res,trees[thread_id]);
 #pragma omp critical

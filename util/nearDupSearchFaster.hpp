@@ -68,12 +68,13 @@ void nearDupSearchFaster(const vector<CW> &cw_vet, const int thres, vector<CW> &
                 // find the maximum in this segTree
                 // auto query_pair = segTree.query(1, 1, discret_size, points[i].pos-1, discret_size);
                 auto query_pair = segTree.query(1, 1, discret_size, 1, discret_size);
+                int rev_discret_pos = discret.rev_discret(query_pair.second);
+                // cout<<"rev_discret_pos:"<< rev_discret_pos<<" max value "<<query_pair.first<<endl;
                 // if get the result
-                if (query_pair.first > thres) {
+                if (query_pair.first >= thres) {
                     pre_pos = points[i - 1].pos;
                     current_pos = points[i].pos;
 
-                    int rev_discret_pos = discret.rev_discret(query_pair.second);
                     cout<< "currentpos and rev_discret"<<current_pos<<" "<<rev_discret_pos<<endl;
                     assert(current_pos-1 <= rev_discret_pos);
                     res.emplace_back(doc_id, pre_pos, -1, rev_discret_pos); // because of right open interval the r should be minused 1

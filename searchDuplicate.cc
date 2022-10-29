@@ -121,7 +121,7 @@ int main(int argc, char **argv) {
     // Fixed parameters
     string dataset = "openwebtext";
     // string tokSeqFile = "../SelfGenerationText/gpt2-small-seq.bin";
-    string tokSeqFile = "../gpt2output_64K_vocal/large-762M-k40.train.jsonl.bin";
+    string tokSeqFile = "../gpt2output_64K_vocal/webtext.train.jsonl.bin";
     wordNum = 64000;   // the token amounts (vocabulary size)
     docNum = 8013769;  // the amount of texts
     zoneMpSize = 3000; // the size of zonemaps under one hashfunction
@@ -215,7 +215,7 @@ int main(int argc, char **argv) {
     int token_len_thres=max(k,fixed_prefix);
 
     int windows_num = 0;
-    for (int i = 0; i < sample_times; i++) {
+    for (int i = 1; i < sample_times; i++) {
         auto &raw_seq = tokenizedSeqs[randomNum[i]];
         
         // make sure the sequence length is long enough
