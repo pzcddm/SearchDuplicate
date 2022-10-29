@@ -10,7 +10,8 @@
 #include "indexItem.hpp"
 #include "new_utils.hpp"
 #include "utils.hpp"
-#include "nearDupSearch.hpp"
+// #include "nearDupSearch.hpp"
+#include "nearDupSearchFaster.hpp"
 
 using namespace std;
 
@@ -20,6 +21,7 @@ extern int wordNum;
 extern int docNum;
 extern vector<unordered_map<unsigned, int>> tokenId2index;
 extern vector<vector<vector<pair<int, unsigned long long>>>> zoneMaps;
+extern vector<SegmentTree> trees;
 
 class Query {
     vector<int> seqTokenized;
@@ -78,7 +80,10 @@ public:
             filtered_groupNum++;
             // Implement LineSweep Algorithm to find the intersection of intervals and get the result
             vector<CW> tmp_res;
-            nearDupSearch(cw_vet, thres, tmp_res, winNum);
+            // nearDupSearch(cw_vet, thres, tmp_res, winNum);
+            int thread_id = omp_get_thread_num();
+            nearDupSearchFaster(cw_vet, thres, tmp_res, trees[thread_id]);
+
 #pragma omp critical
             {
                 if(res.size())
@@ -90,7 +95,7 @@ public:
 
         // printf("Filtered Groups Amount: %d\n", filtered_groupNum);
         query_time = RepTime(timerOn);
-        // printf("This query operation costs %f seconds\n", query_time);
+        printf("This query operation costs %f seconds\n", query_time);
         return res;
     }
 
@@ -179,8 +184,8 @@ private:
             // Implement LineSweep Algorithm to find the intersection of intervals
             vector<CW> tmp_res;
             unsigned tmp_winNum = 0;
-            nearDupSearch(it->second, tmp_thres, tmp_res, tmp_winNum);
-
+            int thread_id = omp_get_thread_num();
+            nearDupSearchFaster(it->second, tmp_thres, tmp_res,trees[thread_id]);
 #pragma omp critical
             if (tmp_res.size() != 0) {
                 candidate_texts.emplace_back(doc_id);
@@ -244,7 +249,7 @@ private:
             }
             inFile.close();
         }
-        // printf("This GroupT operation costs %f seconds\n", RepTime(timerOn));
-        // printf("Groups Amount(Documents that minhashes corresponde): %lu\n", groups.size());
+        printf("This GroupT operation costs %f seconds\n", RepTime(timerOn));
+        printf("Groups Amount(Documents that minhashes corresponde): %lu\n", groups.size());
     }
 };

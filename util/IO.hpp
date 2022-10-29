@@ -4,6 +4,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+using namespace std;
 // load the vector<int> of a bin file and push back to docs
 void loadBin(const string &binFileName, vector<vector<int>> &docs) {
     ifstream ifs(binFileName, ios::binary);

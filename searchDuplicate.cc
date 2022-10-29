@@ -4,7 +4,7 @@
 #include <iostream>
 #include <map>
 
-#include "util/nearDupSearch.hpp"
+// #include "util/nearDupSearch.hpp"
 #include "util/cw.hpp"
 #include "util/IO.hpp"
 
@@ -12,7 +12,7 @@
 #include "util/new_utils.hpp"
 #include "util/indexItem.hpp"
 #include "util/query.hpp"
-
+#include "util/segmentTree.hpp"
 using namespace std;
 
 // global variables
@@ -20,6 +20,7 @@ IndexItem **indexArr;
 vector<unordered_map<unsigned, int>> tokenId2index;
 vector<vector<unsigned>> longTokenIds;
 vector<vector<vector<pair<int, unsigned long long>>>> zoneMaps;
+vector<SegmentTree> trees;
 int zoneMpSize;
 
 vector<pair<int, int>> hashFunctions;
@@ -30,6 +31,10 @@ void prepareGlobalVariables(int k) {
     cout << "total token amount: " << wordNum << endl;
     // the hash functions' seeds are 1 to k (cannot use 0 and 1 both together because their hash functions are the same)
     for (int i = 1; i <= k; i++) generateHashFunc(i, hashFunctions);
+    
+    // intiliaze thread_num segment tree for parelled near duplicate search
+    int thread_num = omp_get_max_threads();
+    trees.resize(thread_num);
 }
 
 void loadZoneMap(int max_k, string zonemap_dir) {
