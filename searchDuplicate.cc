@@ -108,25 +108,27 @@ int reportPassagesNum(const vector<CW> &duplicateCWs) {
     return pasNum;
 }
 
-void display_parameters(const int &tokenNum, const int &k, const int &T, const float & theta, const int &zoneMpSize, const int& fixed_prefixe) {
-    printf("tokenNum: %d ,k: %d , T:%d , theta:%f, zoneMpSize: %d fixed_prefix: %d \n", tokenNum, k, T,theta, zoneMpSize,fixed_prefixe);
+void display_parameters(const int &tokenNum, const int &k, const int &T, const float & theta, const int &zoneMpSize, const int& fixed_prefixe, const int & sample_sequence) {
+    printf("tokenNum: %d ,k: %d , T:%d , theta:%f, zoneMpSize: %d fixed_prefix: %d sample_sequence %d \n", tokenNum, k, T,theta, zoneMpSize,fixed_prefixe, sample_sequence);
 }
 
 int main(int argc, char **argv) {
     // Fixed parameters
     string dataset = "openwebtext";
+    // string tokSeqFile = "../SelfGenerationText/gpt2-small-seq.bin";
     string tokSeqFile = "../gpt2output_64K_vocal/large-762M-k40.train.jsonl.bin";
     wordNum = 64000;   // the token amounts (vocabulary size)
     docNum = 8013769;  // the amount of texts
     zoneMpSize = 3000; // the size of zonemaps under one hashfunction
     int T = 100;  // the T used in generating compact windows
-    const int fixed_prefix = 64;
+    int fixed_prefix = 128;
 
-    int sample_sequence_num = 1000;
+    int sample_sequence_num = 200;
+    int max_windows_num = 1000;
     int max_k = 64;             // the maximum number of hash functions
     int k = 64;                 // the amount of hash functions intended to be used
     double prefix_length = 0.2; // control prefix length
-    float theta = 0.8;          // similarity threshold
+    float theta = 1;          // similarity threshold
     int prefilter_size = int(ceil(0.2 * k) + k * prefix_length);
     
     //load parameters
@@ -134,6 +136,9 @@ int main(int argc, char **argv) {
         string arg = argv[i];
         if (arg == "-dataset"){
             dataset = string(argv[i+1]);
+        }
+        if (arg == "-fixed_prefix"){
+            fixed_prefix = atoi(argv[i+1]);
         }
         if (arg == "-tokSeqFile"){
             tokSeqFile = string(argv[i+1]);
@@ -164,7 +169,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    display_parameters(wordNum,  k, T,theta, zoneMpSize, fixed_prefix); 
+    display_parameters(wordNum,  k, T,theta, zoneMpSize, fixed_prefix,sample_sequence_num); 
     // get the data path
     string cw_dir, indexFile, zonemap_dir;
     string root_dir = getRootDir(wordNum, max_k, T, docNum, zoneMpSize, dataset);
@@ -189,8 +194,9 @@ int main(int argc, char **argv) {
     for (int i = 0; i < tokenizedSeqs.size(); i++) {
         randomNum[i] = i;
     }
-    srand(time(0));
-    random_shuffle(randomNum, randomNum + tokenizedSeqs.size());
+    // control variable
+    // srand(time(0));
+    // random_shuffle(randomNum, randomNum + tokenizedSeqs.size());
 
     int find_num = 0;     // the num of those sequences have near dup
     int total_np_num = 0; // the num of finding np
@@ -202,6 +208,8 @@ int main(int argc, char **argv) {
     int sample_times = sample_sequence_num;
 
     int token_len_thres=max(k,fixed_prefix);
+
+    int windows_num = 0;
     for (int i = 0; i < sample_times; i++) {
         auto &raw_seq = tokenizedSeqs[randomNum[i]];
         
@@ -211,28 +219,34 @@ int main(int argc, char **argv) {
             cout << "Meet short seq, skip " << endl;
             continue;
         }
+        cout<<"New Sequence length: "<<raw_seq.size()<<endl;
+        // Intercept prefix
+        cout<<"windows current: "<<windows_num<<endl;
+        for(int j = 0;j+fixed_prefix<=raw_seq.size();j+=fixed_prefix){
+            windows_num++;
+            vector<int> seq;
+            seq.assign(raw_seq.begin()+j,raw_seq.begin()+fixed_prefix+j);
+            double query_time;
+            unsigned int cwNum = 0;
+            Query query(seq, theta, k, cw_dir, prefilter_size);
 
-        vector<int> seq;
-        //Intercept prefix
-        seq.assign(raw_seq.begin(),raw_seq.begin()+fixed_prefix);
+            // Search near duplicate sentence
+            vector<CW> duplicateCWs = query.getResult(cwNum, query_time);
+            int np_passagesNum = reportPassagesNum(duplicateCWs);
+            if(np_passagesNum>0){
+                find_num++;
+                printf("found a near duplicate window current near duplicate:%d\n ",find_num);
+                mp[np_passagesNum]++;
+                total_np_num+= np_passagesNum;
+                find_np_arr.emplace_back(np_passagesNum);
+            }
+            total_query_time += query_time;
 
-        double query_time;
-        unsigned int windowsNum = 0;
-        Query query(seq, theta, k, cw_dir, prefilter_size);
-
-        // Search near duplicate sentence
-        vector<CW> duplicateCWs = query.getResult(windowsNum, query_time);
-        total_IO_time += query.getIOtime();
-        int np_passagesNum = reportPassagesNum(duplicateCWs);
-        printf("Report Total Windows Num: %u\n", windowsNum);
-        cout << "founded passages amount: " << np_passagesNum << endl;
-        cout << "founded intervals amount: \n" << duplicateCWs.size() << endl;
-
-        total_query_time += query_time;
-        find_num += np_passagesNum ? 1 : 0;
-        mp[np_passagesNum]++;
-        total_np_num += np_passagesNum;
-        find_np_arr.emplace_back(np_passagesNum);
+            if(windows_num>=max_windows_num)
+                break;
+        }
+        if(windows_num>=max_windows_num)
+                break;
     }
 
     for(auto const& it:mp){
@@ -240,6 +254,8 @@ int main(int argc, char **argv) {
     }
     cout<<tokSeqFile<<endl;
     cout << sample_sequence_num<< " Sequences Query Over" << endl;
-    display_parameters(wordNum,  k, T,theta, zoneMpSize, fixed_prefix); 
+    cout<<"windows Num: "<< windows_num<<endl;
+    display_parameters(wordNum,  k, T,theta, zoneMpSize, fixed_prefix,sample_sequence_num);
+    printf("total windows num: %d , near duplicate windows num %d\n", windows_num, find_num);
     printf(" memorized squences amount: %d  total_np_num: %d\n average query cost: %f average IO cost: %f, average caculation cost: %f", find_num, total_np_num, total_query_time / sample_sequence_num, total_IO_time / sample_sequence_num, (total_query_time - total_IO_time) / sample_sequence_num);
 }

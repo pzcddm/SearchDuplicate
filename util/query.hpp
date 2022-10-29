@@ -63,8 +63,13 @@ public:
             its[cnt++] = it;
         }
 
+        int flag =false;
 #pragma omp parallel for
         for (auto const candid_tid : candidate_texts) {
+
+            if(flag){   //need to be delted just to find if there is near duplicate
+                continue;
+            }
             // filter each group's size
             auto const &cw_vet = doc_groups[candid_tid];
             if (cw_vet.size() < thres)
@@ -75,12 +80,17 @@ public:
             vector<CW> tmp_res;
             nearDupSearch(cw_vet, thres, tmp_res, winNum);
 #pragma omp critical
-            res.insert(res.end(), tmp_res.begin(), tmp_res.end());
+            {
+                if(res.size())
+                    flag = true;
+                res.insert(res.end(), tmp_res.begin(), tmp_res.end());
+
+            }
         }
 
-        printf("Filtered Groups Amount: %d\n", filtered_groupNum);
+        // printf("Filtered Groups Amount: %d\n", filtered_groupNum);
         query_time = RepTime(timerOn);
-        printf("This query operation costs %f seconds\n", query_time);
+        // printf("This query operation costs %f seconds\n", query_time);
         return res;
     }
 
@@ -119,7 +129,7 @@ private:
             assert(token_id >= 0 && token_id < wordNum);
             indexes[i] = make_pair(indexArr[i][token_id], i);
         }
-	    cout<<"hello"<<endl;
+	 
         sort(indexes.begin(), indexes.end());
         vector<int> groups_tokens(docNum);
         for (int i = 0; i < prefilter_size; i++) {
@@ -157,7 +167,7 @@ private:
 
         int firstFileterNum = 0; // indicate how many times the linesweep algorithm will be used in prefilter
         int tmp_thres = prefilter_size - (k - thres);
-        cout<< "tmp_thres"<<tmp_thres<<endl;
+        // cout<< "tmp_thres"<<tmp_thres<<endl;
 #pragma omp parallel for
         for (auto const &it : its) {
             // filter each group's size
@@ -176,8 +186,8 @@ private:
                 candidate_texts.emplace_back(doc_id);
             }
         }
-        cout << "firstFileterNum" << firstFileterNum << endl;
-        printf("candidate_texts amount: %u\n", candidate_texts.size());
+        // cout << "firstFileterNum" << firstFileterNum << endl;
+        printf("candidate_texts amount: %lu\n", candidate_texts.size());
 
         // iterate the left indexs and load those cws in candidates texts
         for (int i = prefilter_size; i < k; i++) {
@@ -234,7 +244,7 @@ private:
             }
             inFile.close();
         }
-        printf("This GroupT operation costs %f seconds\n", RepTime(timerOn));
-        printf("Groups Amount(Documents that minhashes corresponde): %lu\n", groups.size());
+        // printf("This GroupT operation costs %f seconds\n", RepTime(timerOn));
+        // printf("Groups Amount(Documents that minhashes corresponde): %lu\n", groups.size());
     }
 };
