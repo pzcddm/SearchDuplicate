@@ -4,7 +4,40 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "indexItem.hpp"
 using namespace std;
+
+
+// load index items into indexArr from the given file 
+void loadIndexItem(IndexItem ** &indexArr, const int wordNum, const int &k, const string &index_file) {
+    printf("------------------Loading Index File------------------\n");
+    indexArr = new IndexItem *[k];
+
+    for (int i = 0; i < k; i++) {
+        indexArr[i] = new IndexItem[wordNum];
+    }
+
+    ifstream inFile(index_file, ios::in | ios::binary);
+    if (!inFile) {
+        cout << "error open index file" << endl;
+        return;
+    }
+
+    for (int i = 0; i < k; i++) {
+        for (int j = 0; j < wordNum; j++) {
+            inFile.read((char *)&indexArr[i][j], sizeof(IndexItem));
+            if (indexArr[i][j].windowsNum < 0) {
+                cout << i << " " << j << endl;
+                cout << indexArr[i][j].windowsNum << " " << indexArr[i][j].offset << endl;
+            }
+
+            assert(indexArr[i][j].windowsNum >= 0);
+        }
+    }
+    inFile.close();
+    printf("------------------Index File Loaded------------------\n");
+}
+
 // load the vector<int> of a bin file and push back to docs
 void loadBin(const string &binFileName, vector<vector<int>> &docs) {
     ifstream ifs(binFileName, ios::binary);

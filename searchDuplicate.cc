@@ -12,16 +12,19 @@
 #include "util/new_utils.hpp"
 #include "util/indexItem.hpp"
 #include "util/query.hpp"
-#include "util/segmentTree.hpp"
+#include "util/dupSearch/segmentTree.hpp"
 using namespace std;
 
 // global variables
 IndexItem **indexArr;
-vector<unordered_map<unsigned, int>> tokenId2index;
-vector<vector<unsigned>> longTokenIds;
-vector<vector<vector<pair<int, unsigned long long>>>> zoneMaps;
+// vector<unordered_map<unsigned, int>> tokenId2index;
+// vector<vector<vector<pair<int, unsigned long long>>>> zoneMaps;
+// int zoneMpSize;
+
 vector<SegmentTree> trees;
-int zoneMpSize;
+
+
+ZoneMaps zonemaps;
 
 vector<pair<int, int>> hashFunctions;
 int wordNum;
@@ -37,67 +40,35 @@ void prepareGlobalVariables(int k) {
     trees.resize(thread_num);
 }
 
-void loadZoneMap(int max_k, string zonemap_dir) {
-    longTokenIds.resize(max_k);
-    zoneMaps.resize(max_k);
-    tokenId2index.resize(max_k);
-    for (int i = 0; i < max_k; i++) {
-        // open file
-        string zonemapFile = zonemap_dir + to_string(i) + ".bin";
-        ifstream inFile(zonemapFile, ios::in | ios::binary);
+// void loadZoneMap(int max_k, string zonemap_dir) {
+//     zoneMaps.resize(max_k);
+//     tokenId2index.resize(max_k);
+//     for (int i = 0; i < max_k; i++) {
+//         // open file
+//         string zonemapFile = zonemap_dir + to_string(i) + ".bin";
+//         ifstream inFile(zonemapFile, ios::in | ios::binary);
 
-        longTokenIds[i].resize(zoneMpSize);
-        zoneMaps[i].resize(zoneMpSize);
+//         zoneMaps[i].resize(zoneMpSize);
 
-        for (int j = 0; j < zoneMpSize; j++) {
-            unsigned tid;
-            unsigned zp_len;
+//         for (int j = 0; j < zoneMpSize; j++) {
+//             unsigned tid;
+//             unsigned zp_len;
 
-            inFile.read((char *)&tid, sizeof(unsigned));    // read token_id
-            inFile.read((char *)&zp_len, sizeof(unsigned)); // read zonemap_length
-            longTokenIds[i][j] = tid;
-            assert(tokenId2index[i].count(tid) == 0);
-            tokenId2index[i][tid] = j; // map the tid to its position in zoneMaps[i]
-            zoneMaps[i][j].resize(zp_len);
+//             inFile.read((char *)&tid, sizeof(unsigned));    // read token_id
+//             inFile.read((char *)&zp_len, sizeof(unsigned)); // read zonemap_length
+//             assert(tokenId2index[i].count(tid) == 0);
+//             tokenId2index[i][tid] = j; // map the tid to its position in zoneMaps[i]
+//             zoneMaps[i][j].resize(zp_len);
 
-            // load zoneMaps' textids and offsets
-            for (int k = 0; k < zp_len; k++) {
-                inFile.read((char *)&zoneMaps[i][j][k].first, sizeof(int));                 // read text_id
-                inFile.read((char *)&zoneMaps[i][j][k].second, sizeof(unsigned long long)); // read offset
-            }
-        }
-        inFile.close();
-    }
-}
-
-void loadIndexItem(int k, string index_file) {
-    printf("------------------Loading Index File------------------\n");
-    indexArr = new IndexItem *[k];
-
-    for (int i = 0; i < k; i++) {
-        indexArr[i] = new IndexItem[wordNum];
-    }
-
-    ifstream inFile(index_file, ios::in | ios::binary);
-    if (!inFile) {
-        cout << "error open index file" << endl;
-        return;
-    }
-
-    for (int i = 0; i < k; i++) {
-        for (int j = 0; j < wordNum; j++) {
-            inFile.read((char *)&indexArr[i][j], sizeof(IndexItem));
-            if (indexArr[i][j].windowsNum < 0) {
-                cout << i << " " << j << endl;
-                cout << indexArr[i][j].windowsNum << " " << indexArr[i][j].offset << endl;
-            }
-
-            assert(indexArr[i][j].windowsNum >= 0);
-        }
-    }
-    inFile.close();
-    printf("------------------Index File Loaded------------------\n");
-}
+//             // load zoneMaps' textids and offsets
+//             for (int k = 0; k < zp_len; k++) {
+//                 inFile.read((char *)&zoneMaps[i][j][k].first, sizeof(int));                 // read text_id
+//                 inFile.read((char *)&zoneMaps[i][j][k].second, sizeof(unsigned long long)); // read offset
+//             }
+//         }
+//         inFile.close();
+//     }
+// }
 
 int reportPassagesNum(const vector<CW> &duplicateCWs) {
     int pasNum = 0;
@@ -124,7 +95,7 @@ int main(int argc, char **argv) {
     string tokSeqFile = "../gpt2output_64K_vocal/webtext.train.jsonl.bin";
     wordNum = 64000;   // the token amounts (vocabulary size)
     docNum = 8013769;  // the amount of texts
-    zoneMpSize = 3000; // the size of zonemaps under one hashfunction
+    int zoneMpSize = 3000; // the size of zonemaps under one hashfunction
     int T = 100;  // the T used in generating compact windows
     int fixed_prefix = 128;
 
@@ -186,11 +157,13 @@ int main(int argc, char **argv) {
 
     prepareGlobalVariables(max_k);
 
-    // load zone map
-    loadZoneMap(max_k, zonemap_dir);
+    // Initialize and load zone map
+    zonemaps = ZoneMaps(max_k, zoneMpSize);
+    zonemaps.load(zonemap_dir);
+    // loadZoneMap(max_k, zonemap_dir);
 
     // load the IndexItem
-    loadIndexItem(max_k, indexFile);
+    loadIndexItem(indexArr, wordNum, max_k, indexFile);
 
     cout << "first tokenized seq Num" << tokenizedSeqs[0].size() << endl;
 
@@ -257,6 +230,7 @@ int main(int argc, char **argv) {
     for(auto const& it:mp){
         printf("np: %d value: %d\n",it.first, it.second);
     }
+
     cout<<tokSeqFile<<endl;
     cout << sample_sequence_num<< " Sequences Query Over" << endl;
     cout<<"windows Num: "<< windows_num<<endl;

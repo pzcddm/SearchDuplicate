@@ -1,5 +1,5 @@
 #pragma once
-#include "cw.hpp"
+#include "../cw.hpp"
 
 #include <map>
 #include <vector>

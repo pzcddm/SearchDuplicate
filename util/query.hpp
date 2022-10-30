@@ -11,8 +11,9 @@
 #include "new_utils.hpp"
 #include "utils.hpp"
 // #include "nearDupSearch.hpp"
-#include "segmentTree.hpp"
-#include "nearDupSearchFaster.hpp"
+#include "dupSearch/segmentTree.hpp"
+#include "dupSearch/nearDupSearchFaster.hpp"
+#include "zoneMap.hpp"
 
 using namespace std;
 
@@ -20,8 +21,9 @@ extern vector<pair<int, int>> hashFunctions;
 extern IndexItem **indexArr;
 extern int wordNum;
 extern int docNum;
-extern vector<unordered_map<unsigned, int>> tokenId2index;
-extern vector<vector<vector<pair<int, unsigned long long>>>> zoneMaps;
+extern ZoneMaps zonemaps;
+// extern vector<unordered_map<unsigned, int>> tokenId2index;
+// extern vector<vector<vector<pair<int, unsigned long long>>>> zoneMaps;
 extern vector<SegmentTree> trees;
 
 class Query {
@@ -68,7 +70,7 @@ public:
 
         int flag =false;
 #pragma omp parallel for
-        for (auto const candid_tid : candidate_texts) {
+        for (const auto &candid_tid : candidate_texts) {
 
             if(flag){   //need to be delted just to find if there is near duplicate
                 continue;
@@ -209,35 +211,41 @@ private:
             }
             for (auto const &candid_text : candidate_texts) {
                 // use zone map
-                assert(tokenId2index[ith_khash].count(token_id));
-                const auto &zonemp = zoneMaps[ith_khash][tokenId2index[ith_khash][token_id]];
-
-                // find the first pair that larger than (candid_text,0ULL)
-                auto it = upper_bound(zonemp.begin(), zonemp.end(), make_pair(candid_text, 0ULL));
-                if (it == zonemp.begin()) {
-                    continue;
-                }
-
-                it--;
-                pair<int, unsigned long long> val = *it;
-                assert(val.first <= candid_text);
-
-                unsigned long long offset = val.second;
-                inFile.seekg(offset, ios::beg);
-                CW tmp_cw;
+                
+                auto timerOn = LogTime();
 
                 vector<CW> text_cws;
-                // load compat windows under specified T
-                auto timerOn = LogTime();
-                while (inFile.read((char *)&tmp_cw, sizeof(CW))) {
-                    if (tmp_cw.T > candid_text) { // because the cw is ordered
-                        break;
-                    }
-
-                    if (tmp_cw.T == candid_text) {
-                        text_cws.emplace_back(tmp_cw);
-                    }
+                zonemaps.getCWinText(inFile, ith_khash, token_id, candid_text, text_cws);
+                if(text_cws.size() == 0){
+                    continue;
                 }
+                // const auto &zonemp = zoneMaps[ith_khash][tokenId2index[ith_khash][token_id]];
+
+                // // find the first pair that larger than (candid_text,0ULL)
+                // auto it = upper_bound(zonemp.begin(), zonemp.end(), make_pair(candid_text, 0ULL));
+                // if (it == zonemp.begin()) {
+                //     continue;
+                // }
+
+                // it--;
+                // pair<int, unsigned long long> val = *it;
+                // assert(val.first <= candid_text);
+
+                // unsigned long long offset = val.second;
+                // inFile.seekg(offset, ios::beg);
+                // CW tmp_cw;
+
+                
+                // // load compat windows under specified T
+                // while (inFile.read((char *)&tmp_cw, sizeof(CW))) {
+                //     if (tmp_cw.T > candid_text) { // because the cw is ordered
+                //         break;
+                //     }
+
+                //     if (tmp_cw.T == candid_text) {
+                //         text_cws.emplace_back(tmp_cw);
+                //     }
+                // }
                 IO_time += RepTime(timerOn);
                 assert(text_cws.size() < 50000); // the amount of compact windows in one text of one token normally is  low (lower than 1e4)
                 // if(text_cws.size()>0){
