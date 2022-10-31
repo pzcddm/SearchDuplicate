@@ -51,8 +51,16 @@ class ZoneMaps{
             }
         }
 
+        bool if_in_zonemap(const int& ith_khash, const int & token_id){
+            return tokenId2index[ith_khash].count(token_id);
+        }
         // Given speicalized hash function id, token_id, and text_id. load the corresponding compact windows into text_cws
         void getCWinText(ifstream& inFile, const int & ith_khash, const int & token_id, const int & text_id, vector<CW>& text_cws){
+            if(tokenId2index[ith_khash].count(token_id) == 0){
+                printf("ith_khash :%d token_id:%d not in this zonemap:\n",ith_khash,token_id);
+                return;
+            }
+                
             assert(tokenId2index[ith_khash].count(token_id));
             const auto &zonemp = zoneMaps[ith_khash][tokenId2index[ith_khash][token_id]];
         

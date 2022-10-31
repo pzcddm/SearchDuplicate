@@ -140,6 +140,21 @@ private:
 	 
         sort(indexes.begin(), indexes.end());
         vector<int> groups_tokens(docNum);
+        // int tmp_prefilter_size  = 0;
+        // for(int i = indexes.size()-1 ;i>=0;i--){
+        //     int ith_khash = indexes[i].second;
+        //     int token_id = minHashesToken[ith_khash];
+        //     if(zonemaps.if_in_zonemap(ith_khash,token_id) == false){
+        //         tmp_prefilter_size = i+1;
+        //         break;
+        //     }
+        // }
+        // if(tmp_prefilter_size>prefilter_size){
+        //     cout<<"tmp_prefilter_size larger: "<<tmp_prefilter_size<<endl;
+        // }
+
+        // prefilter_size = max(prefilter_size,tmp_prefilter_size);
+        
         for (int i = 0; i < prefilter_size; i++) {
             auto timerOn = LogTime();
             vector<CW> cw_vet;

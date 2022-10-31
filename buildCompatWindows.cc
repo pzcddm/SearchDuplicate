@@ -88,14 +88,15 @@ void createSonDir(const string& root_path, string & cw_dir, string & index_file,
 // Todo: Build Index to memory
 int main(int argc, char **argv) {
     string scr_dir = "../openwebtext_64K_vocal/";
+    string src_file = "../dataset_tokenizedGbt2/openwebtext_gpt2.bin";
     string dataset_name = "openwebtext";
-    tokenNum = 64000;
+    tokenNum = 50257;
     int doc_limit = 8013769; //8013769
     int k = 64;                         // the number of hash functions
-    INTERVAL_LIMIT = 25;               // set the interval limit for generating compat windows
+    INTERVAL_LIMIT = 50;               // set the interval limit for generating compat windows
     const int zonemp_interval = 1000;  // the stride that decreasing when generating zonemap
-    const int zoneMpSize = 3000;       // the size of zonemaps under one hashfunction
-    
+    const int zoneMpSize = 8000;       // the size of zonemaps under one hashfunction
+    bool if_oneFile = true;
 
     for (int i = 0; i < argc; i++){
         string arg = string(argv[i]);
@@ -145,7 +146,10 @@ int main(int argc, char **argv) {
     printf("------------------Loading Document File------------------\n");
 
     vector<vector<int>> docs;
-    loadDataDir(scr_dir, docs);
+    if (if_oneFile == true)
+        loadBin(src_file,docs);
+    else
+        loadDataDir(scr_dir, docs);
     auto stop = chrono::high_resolution_clock::now();
     auto duration = chrono::duration_cast<chrono::microseconds>(stop - start);
     cout << "readfile time: " << duration.count() / 1000000.0 << " seconds" << endl;

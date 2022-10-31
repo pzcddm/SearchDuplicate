@@ -17,16 +17,10 @@ using namespace std;
 
 // global variables
 IndexItem **indexArr;
-// vector<unordered_map<unsigned, int>> tokenId2index;
-// vector<vector<vector<pair<int, unsigned long long>>>> zoneMaps;
-// int zoneMpSize;
-
 vector<SegmentTree> trees;
-
-
 ZoneMaps zonemaps;
-
 vector<pair<int, int>> hashFunctions;
+
 int wordNum;
 int docNum;
 
@@ -39,36 +33,6 @@ void prepareGlobalVariables(int k) {
     int thread_num = omp_get_max_threads();
     trees.resize(thread_num);
 }
-
-// void loadZoneMap(int max_k, string zonemap_dir) {
-//     zoneMaps.resize(max_k);
-//     tokenId2index.resize(max_k);
-//     for (int i = 0; i < max_k; i++) {
-//         // open file
-//         string zonemapFile = zonemap_dir + to_string(i) + ".bin";
-//         ifstream inFile(zonemapFile, ios::in | ios::binary);
-
-//         zoneMaps[i].resize(zoneMpSize);
-
-//         for (int j = 0; j < zoneMpSize; j++) {
-//             unsigned tid;
-//             unsigned zp_len;
-
-//             inFile.read((char *)&tid, sizeof(unsigned));    // read token_id
-//             inFile.read((char *)&zp_len, sizeof(unsigned)); // read zonemap_length
-//             assert(tokenId2index[i].count(tid) == 0);
-//             tokenId2index[i][tid] = j; // map the tid to its position in zoneMaps[i]
-//             zoneMaps[i][j].resize(zp_len);
-
-//             // load zoneMaps' textids and offsets
-//             for (int k = 0; k < zp_len; k++) {
-//                 inFile.read((char *)&zoneMaps[i][j][k].first, sizeof(int));                 // read text_id
-//                 inFile.read((char *)&zoneMaps[i][j][k].second, sizeof(unsigned long long)); // read offset
-//             }
-//         }
-//         inFile.close();
-//     }
-// }
 
 int reportPassagesNum(const vector<CW> &duplicateCWs) {
     int pasNum = 0;
@@ -85,26 +49,28 @@ int reportPassagesNum(const vector<CW> &duplicateCWs) {
 }
 
 void display_parameters(const int &tokenNum, const int &k, const int &T, const float & theta, const int &zoneMpSize, const int& fixed_prefixe, const int & sample_sequence) {
-    printf("tokenNum: %d ,k: %d , T:%d , theta:%f, zoneMpSize: %d fixed_prefix: %d sample_sequence %d \n", tokenNum, k, T,theta, zoneMpSize,fixed_prefixe, sample_sequence);
+    printf("tokenNum: %d ,k: %d , T:%d , theta:%f, zoneMpSize: %d fixed_prefix: %d total_sample_sequence %d \n", tokenNum, k, T,theta, zoneMpSize,fixed_prefixe, sample_sequence);
 }
 
 int main(int argc, char **argv) {
     // Fixed parameters
     string dataset = "openwebtext";
-    // string tokSeqFile = "../SelfGenerationText/gpt2-small-seq.bin";
-    string tokSeqFile = "../gpt2output_64K_vocal/webtext.train.jsonl.bin";
-    wordNum = 64000;   // the token amounts (vocabulary size)
-    docNum = 8013769;  // the amount of texts
-    int zoneMpSize = 3000; // the size of zonemaps under one hashfunction
-    int T = 100;  // the T used in generating compact windows
-    int fixed_prefix = 128;
+    string tokSeqFile = "../SelfGenerationText/gpt2-small-540L_50TOPK_400000S.bin";
+    // string tokSeqFile = "../gpt2output_64K_vocal/webtext.train.jsonl.bin";
+    // wordNum = 64000;   // the token amounts (vocabulary size)
+    wordNum = 50257; 
+    docNum = 8013769;  // the amount of texts in the dataset
+    int zoneMpSize = 4000; // the size of zonemaps under one hashfunction
+    int T = 50;  // the T used in generating compact windows
+    int fixed_prefix = 64; // or 128
 
-    int sample_sequence_num = 200;
-    int max_windows_num = 1000;
+    int sample_sequence_num = 3000;
+    int sample_start = 41; 
+    int max_windows_num = 2000;
     int max_k = 64;             // the maximum number of hash functions
     int k = 64;                 // the amount of hash functions intended to be used
     double prefix_length = 0.2; // control prefix length
-    float theta = 1;          // similarity threshold
+    float theta = 0.8;          // similarity threshold
     int prefilter_size = int(ceil(0.2 * k) + k * prefix_length);
     
     //load parameters
@@ -145,6 +111,7 @@ int main(int argc, char **argv) {
         }
     }
 
+    cout<<tokSeqFile<<endl;
     display_parameters(wordNum,  k, T,theta, zoneMpSize, fixed_prefix,sample_sequence_num); 
     // get the data path
     string cw_dir, indexFile, zonemap_dir;
@@ -172,9 +139,6 @@ int main(int argc, char **argv) {
     for (int i = 0; i < tokenizedSeqs.size(); i++) {
         randomNum[i] = i;
     }
-    // control variable
-    // srand(time(0));
-    // random_shuffle(randomNum, randomNum + tokenizedSeqs.size());
 
     int find_num = 0;     // the num of those sequences have near dup
     int total_np_num = 0; // the num of finding np
@@ -182,14 +146,20 @@ int main(int argc, char **argv) {
     double total_query_time = 0;
     double total_IO_time = 0;
     map<int,int> mp;
+    map<double,int> theta_mp;
+    theta_mp[0.8] = 0;
+    theta_mp[0.9] = 0;
+    theta_mp[1.0] = 0;
+
     // Create query
     int sample_times = sample_sequence_num;
 
     int token_len_thres=max(k,fixed_prefix);
 
     int windows_num = 0;
-    for (int i = 1; i < sample_times; i++) {
-        auto &raw_seq = tokenizedSeqs[randomNum[i]];
+    int traversed_sequences_num =0;
+    for (int i = 0; i < sample_times; i++) {
+        auto &raw_seq = tokenizedSeqs[randomNum[i+sample_start]];
         
         // make sure the sequence length is long enough
         if (raw_seq.size() < token_len_thres) {
@@ -199,7 +169,10 @@ int main(int argc, char **argv) {
         }
         cout<<"New Sequence length: "<<raw_seq.size()<<endl;
         // Intercept prefix
+        cout<<"current sequences no: "<<i+sample_start<<endl;
+        cout<<"current traversed sequences number: "<<traversed_sequences_num<<endl;
         cout<<"windows current: "<<windows_num<<endl;
+        traversed_sequences_num ++;
         for(int j = 0;j+fixed_prefix<=raw_seq.size();j+=fixed_prefix){
             windows_num++;
             vector<int> seq;
@@ -210,6 +183,28 @@ int main(int argc, char **argv) {
 
             // Search near duplicate sentence
             vector<CW> duplicateCWs = query.getResult(cwNum, query_time);
+            bool flags[3] = {false,false,false};
+            for(auto const & cw : duplicateCWs){
+                double tmp_theta = int(cw.c*1.0/k *10.0) / 10.0;
+                assert(tmp_theta>=0.8);
+                if(flags[int(ceil((tmp_theta-0.8)*10))] == false){
+                    flags[int(ceil((tmp_theta-0.8)*10))] = true;
+                }
+            }
+
+            if(flags[2]==true){
+                flags[1] = true;
+                flags[0] = true;
+            }
+            
+            if(flags[1] == true){
+                flags[0] = true;
+            }
+            theta_mp[0.8] += flags[0];
+            theta_mp[0.9] += flags[1];
+            theta_mp[1.0] += flags[2];
+
+            // Extract differtent theta from different 
             int np_passagesNum = reportPassagesNum(duplicateCWs);
             if(np_passagesNum>0){
                 find_num++;
@@ -217,6 +212,10 @@ int main(int argc, char **argv) {
                 mp[np_passagesNum]++;
                 total_np_num+= np_passagesNum;
                 find_np_arr.emplace_back(np_passagesNum);
+
+                for(auto const&it :theta_mp ){
+                    printf("theta:%f passage_num:%d\n",it.first, it.second);
+                }
             }
             total_query_time += query_time;
 
@@ -231,10 +230,14 @@ int main(int argc, char **argv) {
         printf("np: %d value: %d\n",it.first, it.second);
     }
 
+    for(auto const&it :theta_mp ){
+        printf("theta:%f passage_num:%d\n",it.first, it.second);
+    }
+
     cout<<tokSeqFile<<endl;
-    cout << sample_sequence_num<< " Sequences Query Over" << endl;
+    cout << traversed_sequences_num<< " Sequences Query Over" << endl;
     cout<<"windows Num: "<< windows_num<<endl;
-    display_parameters(wordNum,  k, T,theta, zoneMpSize, fixed_prefix,sample_sequence_num);
-    printf("total windows num: %d , near duplicate windows num %d\n", windows_num, find_num);
+    display_parameters(wordNum,  k, T,theta, zoneMpSize, fixed_prefix,traversed_sequences_num);
+    printf("total sequence num: %d total windows num: %d , near duplicate windows num %d\n",traversed_sequences_num,windows_num, find_num);
     printf(" memorized squences amount: %d  total_np_num: %d\n average query cost: %f average IO cost: %f, average caculation cost: %f", find_num, total_np_num, total_query_time / sample_sequence_num, total_IO_time / sample_sequence_num, (total_query_time - total_IO_time) / sample_sequence_num);
 }

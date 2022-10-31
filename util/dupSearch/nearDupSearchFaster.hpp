@@ -75,9 +75,9 @@ void nearDupSearchFaster(const vector<CW> &cw_vet, const int thres, vector<CW> &
                     pre_pos = points[i - 1].pos;
                     current_pos = points[i].pos;
 
-                    cout<< "currentpos and rev_discret"<<current_pos<<" "<<rev_discret_pos<<endl;
+                    // cout<< "currentpos and rev_discret"<<current_pos<<" "<<rev_discret_pos<<endl;
                     assert(current_pos-1 <= rev_discret_pos);
-                    res.emplace_back(doc_id, pre_pos, -1, rev_discret_pos); // because of right open interval the r should be minused 1
+                    res.emplace_back(doc_id, pre_pos, query_pair.first, rev_discret_pos); // because of right open interval the r should be minused 1
                     // printf("(%d,%d,%d,%d)\n",pre_pos, current_pos, interval.first, interval.second);
                 }
             }

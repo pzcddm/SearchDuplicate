@@ -1,4 +1,4 @@
-COMPILER = g++
+COMPILER = g++-9
 OBJ_DIR := ./obj
 UTIL_DIR := ./util
 SRC_FILES := $(wildcard $(UTIL_DIR)/*.hpp)
