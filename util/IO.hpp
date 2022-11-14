@@ -10,7 +10,7 @@ using namespace std;
 
 // load index items into indexArr from the given file 
 void loadIndexItem(IndexItem ** &indexArr, const int wordNum, const int &k, const string &index_file) {
-    printf("------------------Loading Index File------------------\n");
+    // printf("------------------Loading Index File------------------\n");
     indexArr = new IndexItem *[k];
 
     for (int i = 0; i < k; i++) {
@@ -35,7 +35,7 @@ void loadIndexItem(IndexItem ** &indexArr, const int wordNum, const int &k, cons
         }
     }
     inFile.close();
-    printf("------------------Index File Loaded------------------\n");
+    // printf("------------------Index File Loaded------------------\n");
 }
 
 // load the vector<int> of a bin file and push back to docs
@@ -106,4 +106,21 @@ void getSonDir(const string &root_path, string &cw_dir, string &index_file, stri
     cw_dir = root_path + "/compatWindows/";
     index_file = root_path + "/index.bin";
     zonemap_dir = root_path + "/zonemap/";
+}
+
+void getScatteredSonDir(const string &scattered_dir, string &cw_dir, string &index_dir, string &zonemap_dir) {
+    cw_dir = scattered_dir + "compatWindows/";
+    index_dir = scattered_dir + "index/";
+    zonemap_dir = scattered_dir + "zonemap/";
+}
+
+void createSonDir(const string& root_path, string & cw_dir, string & index_file, string& zonemap_dir){
+    cw_dir = root_path+"/compatWindows/";
+    index_file = root_path+"/index.bin";
+    zonemap_dir = root_path+"/zonemap/";
+
+    // create directory for cw dir and zonemap_dir
+    mkdir(cw_dir.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO); 
+    mkdir(zonemap_dir.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
+    printf("Directory Made\n");
 }

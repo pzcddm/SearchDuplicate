@@ -55,18 +55,18 @@ void display_parameters(const int &tokenNum, const int &k, const int &T, const f
 int main(int argc, char **argv) {
     // Fixed parameters
     string dataset = "openwebtext";
-    string tokSeqFile = "../SelfGenerationText/gpt2-small-540L_50TOPK_400000S.bin";
+    string tokSeqFile = "../SelfGenerationText/gpt2-medium-540L_50TOPK_400000S.bin";
     // string tokSeqFile = "../gpt2output_64K_vocal/webtext.train.jsonl.bin";
     // wordNum = 64000;   // the token amounts (vocabulary size)
     wordNum = 50257; 
     docNum = 8013769;  // the amount of texts in the dataset
-    int zoneMpSize = 4000; // the size of zonemaps under one hashfunction
+    int zoneMpSize = 8000; // the size of zonemaps under one hashfunction
     int T = 50;  // the T used in generating compact windows
     int fixed_prefix = 64; // or 128
 
-    int sample_sequence_num = 3000;
-    int sample_start = 41; 
-    int max_windows_num = 2000;
+    int sample_sequence_num = 10000;
+    int sample_start = 285; 
+    int max_windows_num = 60000;
     int max_k = 64;             // the maximum number of hash functions
     int k = 64;                 // the amount of hash functions intended to be used
     double prefix_length = 0.2; // control prefix length
@@ -174,6 +174,7 @@ int main(int argc, char **argv) {
         cout<<"windows current: "<<windows_num<<endl;
         traversed_sequences_num ++;
         for(int j = 0;j+fixed_prefix<=raw_seq.size();j+=fixed_prefix){
+            system("keep-job 48");
             windows_num++;
             vector<int> seq;
             seq.assign(raw_seq.begin()+j,raw_seq.begin()+fixed_prefix+j);

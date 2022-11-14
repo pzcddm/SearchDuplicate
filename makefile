@@ -12,6 +12,12 @@ buildCompatWindows: buildCompatWindows.cc util/IO.hpp util/indexItem.hpp util/cw
 searchDuplicate: searchDuplicate.cc util/IO.hpp util/indexItem.hpp util/cw.hpp util/new_utils.hpp util/query.hpp util/dupSearch/segmentTree.hpp
 	${COMPILER} ${CPPFLAGS} -o $@ $<
 
+buildLargeNumWindows: buildLargeNumWindows.cc util/IO.hpp util/indexItem.hpp util/cw.hpp util/new_utils.hpp
+	${COMPILER} ${CPPFLAGS} -o $@ $<
+
+mergeCw: mergeCw.cc util/IO.hpp util/indexItem.hpp util/cw.hpp util/new_utils.hpp
+	${COMPILER} ${CPPFLAGS} -o $@ $<
+
 $(OBJ_DIR)/%.o: $(UTIL_DIR)/%.hpp
 	${COMPILER} $(CPPFLAGS) -c -o $@ $<
 

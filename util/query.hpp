@@ -155,18 +155,23 @@ private:
 
         // prefilter_size = max(prefilter_size,tmp_prefilter_size);
         
+        double getCwsCost = 0;
+        int tmp_thres = prefilter_size - (k - thres);
         for (int i = 0; i < prefilter_size; i++) {
             auto timerOn = LogTime();
             vector<CW> cw_vet;
             string cws_file = cws_dir + to_string(indexes[i].second) + ".bin";
             indexes[i].first.getCompatWindows(cws_file, cw_vet);
-            IO_time += RepTime(timerOn);
-            // cout << "cws length " << cw_vet.size() << endl;
+            getCwsCost += RepTime(timerOn);
+            cout << "cws length " << cw_vet.size() << endl;
 
             int pre_docId = -1;
             for (auto &cw : cw_vet) {
                 int doc_id = cw.T;
 
+                if(groups_tokens[doc_id] + prefilter_size - i < tmp_thres)
+                    continue;
+                    
                 if (groups.count(doc_id)) {
                     groups[doc_id].emplace_back(cw);
                 } else {
@@ -180,6 +185,12 @@ private:
                 }
             }
         }
+        
+        cout << "prefilter_size: "<< prefilter_size<<endl;
+        cout << "Get Cw cost time: "<< getCwsCost<<endl;
+        cout << "Prefilter load cw Got Cost: "<<RepTime(timerOn)<<endl;
+        cout << "Current Groups amount: "<<groups.size()<<endl;
+        timerOn = LogTime();
 
         // get candidate texts
         vector<unordered_map<int, vector<CW>>::iterator> its(groups.size());
@@ -189,7 +200,6 @@ private:
         }
 
         int firstFileterNum = 0; // indicate how many times the linesweep algorithm will be used in prefilter
-        int tmp_thres = prefilter_size - (k - thres);
         // cout<< "tmp_thres"<<tmp_thres<<endl;
 #pragma omp parallel for
         for (auto const &it : its) {
@@ -213,6 +223,9 @@ private:
         }
         // cout << "firstFileterNum" << firstFileterNum << endl;
         printf("candidate_texts amount: %lu\n", candidate_texts.size());
+
+        cout << "Prefilter cal candidate text Got Cost: "<<RepTime(timerOn)<<endl;
+        timerOn = LogTime();
 
         // iterate the left indexs and load those cws in candidates texts
         for (int i = prefilter_size; i < k; i++) {
@@ -275,7 +288,7 @@ private:
             }
             inFile.close();
         }
-        printf("This GroupT operation costs %f seconds\n", RepTime(timerOn));
+        printf("This zonemap found part costs %f seconds\n", RepTime(timerOn));
         printf("Groups Amount(Documents that minhashes corresponde): %lu\n", groups.size());
     }
 };

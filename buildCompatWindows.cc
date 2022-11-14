@@ -74,17 +74,6 @@ string createRootDir(const int &tokenNum, const int &k, const int &T, const int 
     return str;
 }
 
-void createSonDir(const string& root_path, string & cw_dir, string & index_file, string& zonemap_dir){
-    cw_dir = root_path+"/compatWindows/";
-    index_file = root_path+"/index.bin";
-    zonemap_dir = root_path+"/zonemap/";
-
-    // create directory for cw dir and zonemap_dir
-    mkdir(cw_dir.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO); 
-    mkdir(zonemap_dir.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
-    printf("Directory Made\n");
-}
-
 // Todo: Build Index to memory
 int main(int argc, char **argv) {
     string scr_dir = "../openwebtext_64K_vocal/";
