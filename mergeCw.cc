@@ -4,18 +4,18 @@ using namespace std;
 #include "util/cw.hpp"
 #include "util/indexItem.hpp"
 #include "util/IO.hpp"
-#include "util/util.hpp"
+#include "util/utils.hpp"
 
 const int BUFFER_SIZE = 1e8;
 int buffer[BUFFER_SIZE];
 
 int main(){
     string scattered_dir = "./openwebtext_50K_64k_50T_8M_50257ZP_SCATTERED/";
-    string merged_dir = "openwebtext_50K_64k_50T_8M_50257ZP";
-    tokenNum = 50257;
+    string merged_dir = "./openwebtext_50K_64k_50T_8M_50257ZP/";
+    int tokenNum = 50257;
     int doc_limit = 8013769;          // 8013769 210607728
-    int k = 64;                         // the number of hash functions
-    INTERVAL_LIMIT = 50;                // set the interval limit for generating compat windows
+    int K = 64;                         // the number of hash functions
+    const int INTERVAL_LIMIT = 50;                // set the interval limit for generating compat windows
     const int zonemp_interval = 5000;   // the stride that decreasing when generating zonemap
     const int zoneMpSize = 50257;        // the size of zonemaps under one hashfunction
     const int scattered_num = 101;
@@ -37,20 +37,20 @@ int main(){
     }
     vector<IndexItem**> index_vec(scattered_num);
     for(int i = 0 ; i< scattered_num;i++){
-        loadIndexItem(index_vec[i], tokenNum , k, index_files[i])
+        loadIndexItem(index_vec[i], tokenNum , K, index_files[i]);
     }
     
     // Initialize merged_index
     IndexItem ** merged_indexArr;
-    merged_indexArr = new IndexItem *[k];
-    for (int i = 0; i < k; i++) {
+    merged_indexArr = new IndexItem *[K];
+    for (int i = 0; i < K; i++) {
         merged_indexArr[i] = new IndexItem[tokenNum];
     }
 
     // Start Iterate each hash function's scattered data
-    printf("----------- starting merging--------------\n")
+    printf("----------- starting merging--------------\n");
 
-    for(int i = 0 ;i<k;i++){
+    for(int i = 0 ;i<K;i++){
         auto local_st = LogTime();
 
         // Intialize ofstream
@@ -74,20 +74,18 @@ int main(){
         unsigned long long global_offset = 0;
         unsigned long long cur_token_offset;
 
-        vector<pair<int,unsigned long long> zonemap_buffer;
+        vector<pair<int,unsigned long long>> zonemap_buffer;
         // Pratically Merging
         for(int j =0 ;j<tokenNum;j++){
             // thet starting offset of current token in the merged_cws_file
             cur_token_offset = global_offset;
             int cur_window_num = 0;
             for(int k = 0;k<scattered_num;k++){
-                int tmp_windowsNum = index_vec[k][i][j];
-
-                // read cws and write them
+                int tmp_windowsNum = index_vec[k][i][j].windowsNum;
+                assert(tmp_windowsNum>=0);
+               // read cws and write them
                 cws_ifstreams[k].read((char *)buffer, sizeof(CW)*tmp_windowsNum );
-                merged_cws_file.write((char *)buffer, sizeof(CW)*tmp_windowsNum );
-
-                
+                merged_cws_ofstream.write((char *)buffer, sizeof(CW)*tmp_windowsNum );
 
                 // read Zonemap and save it into Zonemap_buffer
                 unsigned tid;
@@ -111,14 +109,15 @@ int main(){
             // Write zonemap files
             unsigned cur_token = j;
             unsigned cur_zp_len =zonemap_buffer.size();
-            merged_zonemap_ofstream.write((char *)&cur_token, sizeof(unsigned))
-            merged_zonemap_ofstream.write((char *)&cur_zp_len, sizeof(unsigned))
+            merged_zonemap_ofstream.write((char *)&cur_token, sizeof(unsigned));
+            merged_zonemap_ofstream.write((char *)&cur_zp_len, sizeof(unsigned));
             for (auto const &pir : zonemap_buffer) {
-                zpFile.write((char *)&pir.first, sizeof(int));                 // write text_id
-                zpFile.write((char *)&pir.second, sizeof(unsigned long long)); // write offset
+                merged_zonemap_ofstream.write((char *)&pir.first, sizeof(int));                 // write text_id
+                merged_zonemap_ofstream.write((char *)&pir.second, sizeof(unsigned long long)); // write offset
             }
-
+            zonemap_buffer.clear();
             // Record indexItem
+            assert(cur_window_num>=0);
             merged_indexArr[i][j].windowsNum = cur_window_num;
             merged_indexArr[i][j].offset = cur_token_offset;
         }
@@ -129,14 +128,14 @@ int main(){
             zmp_ifstreams[j].close();
         }
         merged_cws_ofstream.close();
-        merged_zonemap_ofstream.close()
+        merged_zonemap_ofstream.close();
 
         printf("Local Merging of current hash function cost : %f\n", RepTime(local_st));
     }
 
     printf("------------------Writing Index File------------------\n");
     ofstream index_ofstream(merged_index_file, ios::out | ios::binary);
-    for (int i = 0; i < k; i++) {
+    for (int i = 0; i < K; i++) {
         for (int j = 0; j < tokenNum; j++) {
             index_ofstream.write((char *)&merged_indexArr[i][j], sizeof(IndexItem));
         }
