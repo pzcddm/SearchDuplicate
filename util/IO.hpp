@@ -99,6 +99,7 @@ string getRootDir(const int &tokenNum, const int &k, const int &T, const int &do
     }
 
     string str(root_dir_path);
+    cout << "Root Dir: "<< str <<endl;
     return str;
 }
 

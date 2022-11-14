@@ -163,7 +163,7 @@ private:
             string cws_file = cws_dir + to_string(indexes[i].second) + ".bin";
             indexes[i].first.getCompatWindows(cws_file, cw_vet);
             getCwsCost += RepTime(timerOn);
-            cout << "cws length " << cw_vet.size() << endl;
+            // cout << "cws length " << cw_vet.size() << endl;
 
             int pre_docId = -1;
             for (auto &cw : cw_vet) {

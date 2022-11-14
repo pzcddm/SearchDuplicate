@@ -61,11 +61,12 @@ int main(int argc, char **argv) {
     wordNum = 50257; 
     docNum = 8013769;  // the amount of texts in the dataset
     int zoneMpSize = 8000; // the size of zonemaps under one hashfunction
+    // int zoneMpSize = 50257;
     int T = 50;  // the T used in generating compact windows
     int fixed_prefix = 64; // or 128
 
     int sample_sequence_num = 10000;
-    int sample_start = 285; 
+    int sample_start = 298; 
     int max_windows_num = 60000;
     int max_k = 64;             // the maximum number of hash functions
     int k = 64;                 // the amount of hash functions intended to be used
