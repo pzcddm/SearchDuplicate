@@ -81,7 +81,7 @@ int main(int argc, char **argv) {
     string dataset_name = "openwebtext";
     tokenNum = 50257;
     int doc_limit = 8013769; //8013769
-    int k = 64;                         // the number of hash functions
+    int k = 32;                         // the number of hash functions
     INTERVAL_LIMIT = 50;               // set the interval limit for generating compat windows
     const int zonemp_interval = 1000;  // the stride that decreasing when generating zonemap
     const int zoneMpSize = 8000;       // the size of zonemaps under one hashfunction

@@ -125,3 +125,38 @@ void createSonDir(const string& root_path, string & cw_dir, string & index_file,
     mkdir(zonemap_dir.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
     printf("Directory Made\n");
 }
+
+
+void readDocInex(vector<unsigned long long> & doc_index, const string & docIndex_file){
+    ifstream ifs(docIndex_file, ios::binary);
+    unsigned long long offset;
+    while (ifs.read((char *)&offset, sizeof(unsigned long long ))) {
+        doc_index.emplace_back(offset);
+    }
+    ifs.close();
+
+    printf("---------------Index of Documents Read-----------------\n");
+}
+
+void getDocContent(vector<int> & tokens, const int &doc_id, const vector<unsigned long long> &doc_index, const string & binFIle){
+    ifstream ifs(binFIle, ios::binary);
+    unsigned long long offset = doc_index[doc_id];
+    ifs.seekg(offset, ios_base::beg);
+
+    int size;
+    ifs.read((char *)&size, sizeof(int));
+
+    int tmp_token;
+    for(int i =0;i<size;i++){
+        ifs.read((char *)&tmp_token, sizeof(int));
+        tokens.emplace_back(tmp_token);
+    }
+    ifs.close();
+}
+
+void getPassage(const unsigned & doc_id, const vector<unsigned long long> &doc_index, const string & file_path, const int l, const int r, vector<int> &passage){
+    vector<int> doc;
+    getDocContent(doc, doc_id, doc_index, file_path);
+    assert(l<doc.size() && r-1<doc.size());
+    passage.assign(doc.begin()+l, doc.begin()+r-1);
+}

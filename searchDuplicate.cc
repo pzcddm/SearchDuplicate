@@ -54,20 +54,21 @@ void display_parameters(const int &tokenNum, const int &k, const int &T, const f
 
 int main(int argc, char **argv) {
     // Fixed parameters
-    string dataset = "pile";
-    // string tokSeqFile = "../SelfGenerationText/gpt2-medium-540L_50TOPK_400000S.bin";
-    string tokSeqFile = "../SelfGenerationText/gpt-neo-540L_50TOPK_1_3B.bin.bin";
+    string source_bin_file = "../dataset_tokenizedGbt2/openwebtext_gpt2.bin";
+    string dataset = "openwebtext";
+    string tokSeqFile = "../SelfGenerationText/gpt2-medium-540L_50TOPK_400000S.bin";
+    // string tokSeqFile = "../SelfGenerationText/gpt-neo-540L_50TOPK_1_3B.bin.bin";
     // string tokSeqFile = "../gpt2output_64K_vocal/webtext.train.jsonl.bin";
-    // wordNum = 64000;   // the token amounts (vocabulary size)
     wordNum = 50257; 
-    docNum = 210607728;  // the amount of texts in the dataset 210607728 8013769
+    docNum = 8013769;  // the amount of texts in the dataset 210607728 8013769
     int zoneMpSize = 50257; // the size of zonemaps under one hashfunction
     // int zoneMpSize = 50257;
     int T = 50;  // the T used in generating compact windows
     int fixed_prefix = 64; // or 128
 
+    bool if_showPassage = false;
     int sample_sequence_num = 10000;
-    int sample_start = 298; 
+    int sample_start = 0; 
     int max_windows_num = 60000;
     int max_k = 64;             // the maximum number of hash functions
     int k = 64;                 // the amount of hash functions intended to be used
@@ -75,6 +76,11 @@ int main(int argc, char **argv) {
     float theta = 0.8;          // similarity threshold
     int prefilter_size = int(ceil(0.2 * k) + k * prefix_length);
     
+    // load document index
+    string doc_index_file = "./openwebtext_gpt2_docIndex.bin";
+    vector<unsigned long long> doc_index;
+    readDocInex(doc_index, doc_index_file);
+
     //load parameters
     for (int i = 0; i < argc; i++){
         string arg = argv[i];
@@ -193,7 +199,27 @@ int main(int argc, char **argv) {
                 if(flags[int(ceil((tmp_theta-0.8)*10))] == false){
                     flags[int(ceil((tmp_theta-0.8)*10))] = true;
                 }
+            }   
+
+            // output the duplicate passage
+            if(if_showPassage && duplicateCWs.size()){
+
+                int max_id;
+                int max_length = 0;
+                for(int m = 0;m<duplicateCWs.size();m++){
+                    auto tmp_length = duplicateCWs[m].r - duplicateCWs[m].l;
+                    if(tmp_length >=  max_length){
+                        max_id = m;
+                        max_length = tmp_length;
+                    }
+                }
+                cout<<"Print one of the duplicate passage:\n";
+                vector<int> dup_passage;
+                auto cw = duplicateCWs[max_id];
+                getPassage(cw.T, doc_index, source_bin_file, cw.l, cw.r, dup_passage);
+                printVec(dup_passage);
             }
+            
 
             if(flags[2]==true){
                 flags[1] = true;
@@ -211,7 +237,13 @@ int main(int argc, char **argv) {
             int np_passagesNum = reportPassagesNum(duplicateCWs);
             if(np_passagesNum>0){
                 find_num++;
-                printf("found a near duplicate window current near duplicate:%d\n ",find_num);
+
+                if(if_showPassage){
+                    cout<<"Show the query seq:\n";
+                    printVec(seq);
+                    printf("found a near duplicate window current near duplicate:%d\n ",find_num);
+                }
+               
                 mp[np_passagesNum]++;
                 total_np_num+= np_passagesNum;
                 find_np_arr.emplace_back(np_passagesNum);
