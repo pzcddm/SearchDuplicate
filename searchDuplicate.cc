@@ -54,13 +54,14 @@ void display_parameters(const int &tokenNum, const int &k, const int &T, const f
 
 int main(int argc, char **argv) {
     // Fixed parameters
-    string dataset = "openwebtext";
-    string tokSeqFile = "../SelfGenerationText/gpt2-medium-540L_50TOPK_400000S.bin";
+    string dataset = "pile";
+    // string tokSeqFile = "../SelfGenerationText/gpt2-medium-540L_50TOPK_400000S.bin";
+    string tokSeqFile = "../SelfGenerationText/gpt-neo-540L_50TOPK_1_3B.bin.bin";
     // string tokSeqFile = "../gpt2output_64K_vocal/webtext.train.jsonl.bin";
     // wordNum = 64000;   // the token amounts (vocabulary size)
     wordNum = 50257; 
-    docNum = 8013769;  // the amount of texts in the dataset
-    int zoneMpSize = 8000; // the size of zonemaps under one hashfunction
+    docNum = 210607728;  // the amount of texts in the dataset 210607728 8013769
+    int zoneMpSize = 50257; // the size of zonemaps under one hashfunction
     // int zoneMpSize = 50257;
     int T = 50;  // the T used in generating compact windows
     int fixed_prefix = 64; // or 128
@@ -85,7 +86,7 @@ int main(int argc, char **argv) {
         }
         if (arg == "-tokSeqFile"){
             tokSeqFile = string(argv[i+1]);
-        }
+        } 
         if (arg == "-wordNum"){
             wordNum = atoi(argv[i+1]);
         }

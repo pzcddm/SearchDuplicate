@@ -3,12 +3,12 @@
 #include <fstream>
 #include <iostream>
 using namespace std;
-class IndexItem {
+class BigIndexItem {
 public:
-    unsigned windowsNum = -1; // how many windows in that list of
+    long long windowsNum = -1; // how many windows in that list of
     unsigned long long offset = 0;
 
-    IndexItem() {
+    BigIndexItem() {
         windowsNum = -1;
         offset = 0;
     }
@@ -21,7 +21,7 @@ public:
     }
 
     void display() {
-        printf("offset:%llu, windowsNUm: %d\n", offset, windowsNum);
+        printf("offset:%llu, windowsNUm: %lld\n", offset, windowsNum);
     }
 
     void getCompatWindows(string cw_files, vector<CW> & res_cws){

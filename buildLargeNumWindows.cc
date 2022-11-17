@@ -111,12 +111,12 @@ void createSonDir(const string &root_path, string &cw_dir, string &index_dir, st
 // Todo: Build Index to memory
 int main(int argc, char **argv) {
     // string scr_dir = "../openwebtext_64K_vocal/";
-    // string src_file = "../dataset_tokenizedGbt2/pile_gpt2.bin";
-    // string dataset_name = "pile";
-    string src_file = "../dataset_tokenizedGbt2/openwebtext_gpt2.bin";
-    string dataset_name = "openwebtext";
+    string src_file = "../dataset_tokenizedGbt2/pile_gpt2.bin";
+    string dataset_name = "pile";
+    // string src_file = "../dataset_tokenizedGbt2/openwebtext_gpt2.bin";
+    // string dataset_name = "openwebtext";
     tokenNum = 50257;
-    int doc_limit = 8013769;          // 8013769 210607728
+    int doc_limit = 210607728;          // 8013769 210607728
     int epoch_docNum = doc_limit / 100; // the maximun number of documents that are iterated in a epoch
     int k = 64;                         // the number of hash functions
     INTERVAL_LIMIT = 50;                // set the interval limit for generating compat windows
@@ -177,7 +177,6 @@ int main(int argc, char **argv) {
         
         readFileTime += RepTime(readOneDocumentSt);
         doc_cnt++;
-        if(doc_cnt)
         // if(doc_cnt == 733070){
         //     for(auto const & tmp:vec){
         //         cout<<tmp<<endl;
@@ -188,6 +187,9 @@ int main(int argc, char **argv) {
             printf("------------------Partial Documents Loaded------------------\n");
             printf("Epoch: %d Current Doc_Cnt :%d \n", epochs, doc_cnt);
 
+            if(epochs<=89 && epochs>=85){
+
+            
             // Index Item
             IndexItem **indexArr;
             indexArr = new IndexItem *[k];
@@ -313,6 +315,8 @@ int main(int argc, char **argv) {
             }
             outFile.close();
             printf("------------------Index File Writed------------------\n");
+
+            }
             epochs++;
 
             system("keep-job 48");
