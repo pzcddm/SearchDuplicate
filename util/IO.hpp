@@ -5,8 +5,38 @@
 #include <unistd.h>
 
 #include "indexItem.hpp"
+#include "bigIndexItem.hpp"
 using namespace std;
 
+// load index items into indexArr from the given file 
+void loadBigIndexItem(BigIndexItem ** &indexArr, const int wordNum, const int &k, const string &index_file) {
+    // printf("------------------Loading Index File------------------\n");
+    indexArr = new BigIndexItem *[k];
+
+    for (int i = 0; i < k; i++) {
+        indexArr[i] = new BigIndexItem[wordNum];
+    }
+
+    ifstream inFile(index_file, ios::in | ios::binary);
+    if (!inFile) {
+        cout << "error open index file" << endl;
+        return;
+    }
+
+    for (int i = 0; i < k; i++) {
+        for (int j = 0; j < wordNum; j++) {
+            inFile.read((char *)&indexArr[i][j], sizeof(BigIndexItem));
+            if (indexArr[i][j].windowsNum < 0) {
+                cout << i << " " << j << endl;
+                cout << indexArr[i][j].windowsNum << " " << indexArr[i][j].offset << endl;
+            }
+
+            assert(indexArr[i][j].windowsNum >= 0);
+        }
+    }
+    inFile.close();
+    // printf("------------------Index File Loaded------------------\n");
+}
 
 // load index items into indexArr from the given file 
 void loadIndexItem(IndexItem ** &indexArr, const int wordNum, const int &k, const string &index_file) {
@@ -38,9 +68,25 @@ void loadIndexItem(IndexItem ** &indexArr, const int wordNum, const int &k, cons
     // printf("------------------Index File Loaded------------------\n");
 }
 
+void writeBin(const vector<vector<int>> & vecs, const string & binFileName){
+    ofstream ofs(binFileName, ios::binary);
+    for(auto const & vec:vecs){
+        int size = vec.size();
+        ofs.write((char *)&size, sizeof(int));
+        for(auto const & tmp: vec){
+            ofs.write((char *)&tmp, sizeof(int));
+        }
+    }
+    ofs.close();
+}
+
 // load the vector<int> of a bin file and push back to docs
 void loadBin(const string &binFileName, vector<vector<int>> &docs) {
     ifstream ifs(binFileName, ios::binary);
+    if (!ifs) {
+        cout << "error open bin file" << endl;
+        return;
+    }
     int size;
     while (ifs.read((char *)&size, sizeof(int))) {
         vector<int> vec(size);
@@ -91,7 +137,7 @@ int IsFileExist(const char *path) {
 // get the create
 string getRootDir(const int &tokenNum, const int &k, const int &T, const int &doc_lim, const int &zoneMpSize, const string &dataset_name) {
     char root_dir_path[50];
-    sprintf(root_dir_path, "%s_%dK_%dk_%dT_%dM_%dZP", dataset_name.c_str(), tokenNum / 1000, k, T, doc_lim / 1000000, zoneMpSize);
+    sprintf(root_dir_path, "./index/%s_%dK_%dk_%dT_%dM_%dZP", dataset_name.c_str(), tokenNum / 1000, k, T, doc_lim / 1000000, zoneMpSize);
     if (IsFileExist(root_dir_path)) {
         cout << "get the target root path" << endl;
     } else {

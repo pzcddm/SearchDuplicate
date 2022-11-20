@@ -8,6 +8,7 @@
 #include <omp.h>
 
 #include "indexItem.hpp"
+#include "bigIndexItem.hpp"
 #include "new_utils.hpp"
 #include "utils.hpp"
 // #include "nearDupSearch.hpp"
@@ -18,7 +19,7 @@
 using namespace std;
 
 extern vector<pair<int, int>> hashFunctions;
-extern IndexItem **indexArr;
+extern BigIndexItem **indexArr;
 extern int wordNum;
 extern int docNum;
 extern ZoneMaps zonemaps;
@@ -34,6 +35,7 @@ class Query {
     int prefilter_size; // the size of smallest compat windows vectors loaded into prefilter
 private:
     double IO_time = 0;
+
 public:
     Query() {
     }
@@ -43,7 +45,9 @@ public:
         assert(theta <= 1.0);
     }
 
-    double getIOtime(){ return IO_time;}
+    double getIOtime() {
+        return IO_time;
+    }
     vector<CW> getResult(unsigned int &winNum, double &query_time) {
         // Timer on
         auto timerOn = LogTime();
@@ -68,11 +72,10 @@ public:
             its[cnt++] = it;
         }
 
-        int flag =false;
+        int flag = false;
 #pragma omp parallel for
         for (const auto &candid_tid : candidate_texts) {
-
-            if(flag){   //need to be delted just to find if there is near duplicate
+            if (flag) { // need to be delted just to find if there is near duplicate
                 continue;
             }
             // filter each group's size
@@ -89,10 +92,9 @@ public:
 
 #pragma omp critical
             {
-                if(res.size())
+                if (res.size())
                     flag = true;
                 res.insert(res.end(), tmp_res.begin(), tmp_res.end());
-
             }
         }
 
@@ -114,7 +116,7 @@ private:
             // Get minHash of current hashfunction
             int minValuePos = min_element(hashValues.begin(), hashValues.end()) - hashValues.begin();
             minHashesToken[i] = seqTokenized[minValuePos];
-	    assert(minHashesToken[i]>=0);
+            assert(minHashesToken[i] >= 0);
         }
         printf("------------------MinHashesToken Generated------------------\n");
     }
@@ -128,16 +130,16 @@ private:
 
         assert(minHashesToken.size() == k);
 
-        vector<pair<IndexItem, int>> indexes(k);
+        vector<pair<BigIndexItem, int>> indexes(k);
         for (int i = 0; i < minHashesToken.size(); i++) {
-            int token_id = minHashesToken[i]; 
-            if(token_id<0||token_id >= wordNum){
-                cout<<"Error! token id Error"<<token_id<<endl;
+            int token_id = minHashesToken[i];
+            if (token_id < 0 || token_id >= wordNum) {
+                cout << "Error! token id Error" << token_id << endl;
             }
             assert(token_id >= 0 && token_id < wordNum);
             indexes[i] = make_pair(indexArr[i][token_id], i);
         }
-	 
+
         sort(indexes.begin(), indexes.end());
         vector<int> groups_tokens(docNum);
         // int tmp_prefilter_size  = 0;
@@ -154,14 +156,16 @@ private:
         // }
 
         // prefilter_size = max(prefilter_size,tmp_prefilter_size);
-        
+
         double getCwsCost = 0;
+        unsigned long long prefilter_cws_amount = 0;
         int tmp_thres = prefilter_size - (k - thres);
         for (int i = 0; i < prefilter_size; i++) {
             auto timerOn = LogTime();
             vector<CW> cw_vet;
             string cws_file = cws_dir + to_string(indexes[i].second) + ".bin";
             indexes[i].first.getCompatWindows(cws_file, cw_vet);
+            prefilter_cws_amount += cw_vet.size();
             getCwsCost += RepTime(timerOn);
             // cout << "cws length " << cw_vet.size() << endl;
 
@@ -169,9 +173,9 @@ private:
             for (auto &cw : cw_vet) {
                 int doc_id = cw.T;
 
-                if(groups_tokens[doc_id] + prefilter_size - i < tmp_thres)
+                if (groups_tokens[doc_id] + prefilter_size - i < tmp_thres)
                     continue;
-                    
+
                 if (groups.count(doc_id)) {
                     groups[doc_id].emplace_back(cw);
                 } else {
@@ -185,11 +189,13 @@ private:
                 }
             }
         }
-        
-        cout << "prefilter_size: "<< prefilter_size<<endl;
-        cout << "Get Cw cost time: "<< getCwsCost<<endl;
-        cout << "Prefilter load cw Got Cost: "<<RepTime(timerOn)<<endl;
-        cout << "Current Groups amount: "<<groups.size()<<endl;
+
+        IO_time += getCwsCost;
+        cout << "prefilter_cws_amount: " << prefilter_cws_amount << endl;
+        cout << "prefilter_size: " << prefilter_size << endl;
+        cout << "Get Cw cost time: " << getCwsCost << endl;
+        cout << "Prefilter load cw Got Cost: " << RepTime(timerOn) << endl;
+        cout << "Current Groups amount: " << groups.size() << endl;
         timerOn = LogTime();
 
         // get candidate texts
@@ -200,11 +206,12 @@ private:
         }
 
         int firstFileterNum = 0; // indicate how many times the linesweep algorithm will be used in prefilter
-        // cout<< "tmp_thres"<<tmp_thres<<endl;
+                                 // cout<< "tmp_thres"<<tmp_thres<<endl;
 #pragma omp parallel for
         for (auto const &it : its) {
             // filter each group's size
             int doc_id = it->first;
+            assert(doc_id<docNum);
             if (groups_tokens[doc_id] < tmp_thres)
                 continue;
             firstFileterNum++;
@@ -212,10 +219,11 @@ private:
             // Implement LineSweep Algorithm to find the intersection of intervals
             vector<CW> tmp_res;
             unsigned tmp_winNum = 0;
-            
+
             // nearDupSearch(it->second, tmp_thres, tmp_res, tmp_winNum);
             int thread_id = omp_get_thread_num();
-            nearDupSearchFaster(it->second, tmp_thres, tmp_res,trees[thread_id]);
+            nearDupSearchFaster(it->second, tmp_thres, tmp_res, trees[thread_id]);
+
 #pragma omp critical
             if (tmp_res.size() != 0) {
                 candidate_texts.emplace_back(doc_id);
@@ -224,7 +232,7 @@ private:
         // cout << "firstFileterNum" << firstFileterNum << endl;
         printf("candidate_texts amount: %lu\n", candidate_texts.size());
 
-        cout << "Prefilter cal candidate text Got Cost: "<<RepTime(timerOn)<<endl;
+        cout << "Prefilter cal candidate text Got Cost: " << RepTime(timerOn) << endl;
         timerOn = LogTime();
 
         // iterate the left indexs and load those cws in candidates texts
@@ -239,16 +247,16 @@ private:
             }
             for (auto const &candid_text : candidate_texts) {
                 // use zone map
-                
+
                 auto timerOn = LogTime();
 
                 vector<CW> text_cws;
                 zonemaps.getCWinText(inFile, ith_khash, token_id, candid_text, text_cws);
-                if(text_cws.size() == 0){
+                if (text_cws.size() == 0) {
                     continue;
                 }
                 // const auto &zonemp = zoneMaps[ith_khash][tokenId2index[ith_khash][token_id]];
-
+                                                                                
                 // // find the first pair that larger than (candid_text,0ULL)
                 // auto it = upper_bound(zonemp.begin(), zonemp.end(), make_pair(candid_text, 0ULL));
                 // if (it == zonemp.begin()) {
@@ -263,7 +271,6 @@ private:
                 // inFile.seekg(offset, ios::beg);
                 // CW tmp_cw;
 
-                
                 // // load compat windows under specified T
                 // while (inFile.read((char *)&tmp_cw, sizeof(CW))) {
                 //     if (tmp_cw.T > candid_text) { // because the cw is ordered

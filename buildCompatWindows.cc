@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
     int k = 32;                         // the number of hash functions
     INTERVAL_LIMIT = 50;               // set the interval limit for generating compat windows
     const int zonemp_interval = 1000;  // the stride that decreasing when generating zonemap
-    const int zoneMpSize = 8000;       // the size of zonemaps under one hashfunction
+    const int zoneMpSize = 3000;       // the size of zonemaps under one hashfunction
     bool if_oneFile = true;
 
     for (int i = 0; i < argc; i++){
@@ -175,8 +175,8 @@ int main(int argc, char **argv) {
         cout << "Partition Algo Over" << endl;
         // Merge inverted list generated from different threads and sort it
         vector<vector<CW>> res_cws(tokenNum);
-#pragma omp parallel for reduction(+ \
-                                   : total_cws_amount)
+// #pragma omp parallel for reduction(+ \
+//                                    : total_cws_amount)
         for (int j = 0; j < tokenNum; j++) {
             for (int tid = 0; tid < thread_num; tid++) {
                 res_cws[j].insert(res_cws[j].end(), tmp_vetor[tid][j].begin(), tmp_vetor[tid][j].end());

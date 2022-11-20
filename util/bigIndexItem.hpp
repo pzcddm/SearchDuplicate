@@ -12,8 +12,8 @@ public:
         windowsNum = -1;
         offset = 0;
     }
-    
-    bool operator<(const IndexItem &tmp) const {
+
+    bool operator<(const BigIndexItem &tmp) const {
         if (windowsNum == tmp.windowsNum) {
             return offset < tmp.offset;
         }
@@ -24,20 +24,20 @@ public:
         printf("offset:%llu, windowsNUm: %lld\n", offset, windowsNum);
     }
 
-    void getCompatWindows(string cw_files, vector<CW> & res_cws){
+    void getCompatWindows(string cw_files, vector<CW> &res_cws) {
         ifstream inFile(cw_files, ios::in | ios::binary); //二进制读方式打开
         if (!inFile) {
             cout << "error open file" << endl;
             return;
         }
 
-        inFile.seekg(offset,ios::beg);//把文件的写指针从文件开头向后移offset个字节
-	if(windowsNum<0){
-		cout<<windowsNum<<endl;
-	}
-	assert(windowsNum>=0);
+        inFile.seekg(offset, ios::beg); //把文件的写指针从文件开头向后移offset个字节
+        if (windowsNum < 0) {
+            cout << windowsNum << endl;
+        }
+        assert(windowsNum >= 0);
         res_cws.resize(windowsNum);
-        inFile.read((char *)&res_cws[0], sizeof(CW)*windowsNum);
+        inFile.read((char *)&res_cws[0], sizeof(CW) * windowsNum);
         inFile.close();
     }
 };

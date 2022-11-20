@@ -27,16 +27,16 @@ struct Point {
     }
 };
 
-void nearDupSearchFaster(const vector<CW> &cw_vet, const int thres, vector<CW> &res, SegmentTree& segTree) {
+void nearDupSearchFaster(const vector<CW> &cw_vet, const int thres, vector<CW> &res, SegmentTree &segTree) {
     // Get the points from the 1D interval of these compat windows
     vector<Point> points(cw_vet.size() * 2);
     int doc_id = cw_vet[0].T;
     //  cout << "Finding Near Duplicate in this doc_id : "<<doc_id<<endl;
-    
+
     // Discretization Tool
     Discret discret;
 
-    //Initilize Points Array and push each c and r into Discret
+    // Initilize Points Array and push each c and r into Discret
     for (int i = 0; i < cw_vet.size(); i++) {
         points[i << 1] = Point(cw_vet[i].l, 0, i);
         points[i << 1 | 1] = Point(cw_vet[i].c + 1, 1, i); // Left closed and right open interval
@@ -47,15 +47,15 @@ void nearDupSearchFaster(const vector<CW> &cw_vet, const int thres, vector<CW> &
     }
 
     sort(points.begin(), points.end());
-    //sort(std::execution::par_unseq, points.begin(), points.end());
+    // sort(std::execution::par_unseq, points.begin(), points.end());
 
     // execute diecretization
     discret.exe();
     int discret_size = discret.getArrSize();
-    
+
     // build segTree for judging whether there is intersection in second dimension
-    segTree.build(1,1,discret_size);
-    
+    segTree.build(1, 1, discret_size);
+
     // Line Sweep Algorithm
     unordered_set<int> ids;
     int pre_pos = -1;
@@ -64,7 +64,6 @@ void nearDupSearchFaster(const vector<CW> &cw_vet, const int thres, vector<CW> &
         // check If iterate to a new position
         if (i > 0 && points[i].pos != points[i - 1].pos) {
             if (ids.size() >= thres) {
-
                 // find the maximum in this segTree
                 // auto query_pair = segTree.query(1, 1, discret_size, points[i].pos-1, discret_size);
                 auto query_pair = segTree.query(1, 1, discret_size, 1, discret_size);
@@ -76,7 +75,7 @@ void nearDupSearchFaster(const vector<CW> &cw_vet, const int thres, vector<CW> &
                     current_pos = points[i].pos;
 
                     // cout<< "currentpos and rev_discret"<<current_pos<<" "<<rev_discret_pos<<endl;
-                    assert(current_pos-1 <= rev_discret_pos);
+                    assert(current_pos - 1 <= rev_discret_pos);
                     res.emplace_back(doc_id, pre_pos, query_pair.first, rev_discret_pos); // because of right open interval the r should be minused 1
                     // printf("(%d,%d,%d,%d)\n",pre_pos, current_pos, interval.first, interval.second);
                 }
@@ -86,17 +85,25 @@ void nearDupSearchFaster(const vector<CW> &cw_vet, const int thres, vector<CW> &
         auto corres_cw = cw_vet[points[i].id];
         int discreted_c = discret.discrete(corres_cw.c);
         int discreted_r = discret.discrete(corres_cw.r);
-        assert(discreted_c<=discreted_r);
-        
-        // start point added to set
+        // if (discreted_c > discreted_r) {
+        //     cout << discreted_c << " " << discreted_r << endl;
+        //     cout << corres_cw.c << " " << corres_cw.r << endl;
+        //     corres_cw.display();
+        //     cw_vet[0].display();
+        //     assert(points[i].id < cw_vet.size());
+        //     cout << points[i].id << endl;
+        // }
+        // assert(discreted_c <= discreted_r);
+
+        // start point added to set                                                                                     
         // and end point erased from set
         // update segement tree
         if (points[i].flag == 0) {
             ids.insert(points[i].id);
-            segTree.update_Interval(1,1,discret_size,discreted_c,discreted_r,1);
+            segTree.update_Interval(1, 1, discret_size, discreted_c, discreted_r, 1);
         } else {
             ids.erase(points[i].id);
-            segTree.update_Interval(1,1,discret_size,discreted_c,discreted_r,-1);
+            segTree.update_Interval(1, 1, discret_size, discreted_c, discreted_r, -1);
         }
     }
     segTree.clean();

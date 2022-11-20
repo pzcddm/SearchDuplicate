@@ -13,3 +13,4 @@ done
 #do
 	# ./buildCompatWindows -t 25 -k 4 >>exp1.txt
 #done
+./searchDuplicate -docNum 1000000 -T 25 -k 32
