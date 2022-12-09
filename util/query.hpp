@@ -48,7 +48,8 @@ public:
     double getIOtime() {
         return IO_time;
     }
-    vector<CW> getResult(unsigned int &winNum, double &query_time) {
+
+    vector<CW> getResult(unsigned int &winNum, double &query_time) {    
         // Timer on
         auto timerOn = LogTime();
 
@@ -82,7 +83,13 @@ public:
             auto const &cw_vet = doc_groups[candid_tid];
             if (cw_vet.size() < thres)
                 continue;
+            else
+                cout << candid_tid <<" has cws :" <<cw_vet.size()<<endl;
 
+            // output all the compact windows
+            for (const auto &cw: cw_vet){
+                cw.display();
+            }
             filtered_groupNum++;
             // Implement LineSweep Algorithm to find the intersection of intervals and get the result
             vector<CW> tmp_res;
@@ -142,20 +149,6 @@ private:
 
         sort(indexes.begin(), indexes.end());
         vector<int> groups_tokens(docNum);
-        // int tmp_prefilter_size  = 0;
-        // for(int i = indexes.size()-1 ;i>=0;i--){
-        //     int ith_khash = indexes[i].second;
-        //     int token_id = minHashesToken[ith_khash];
-        //     if(zonemaps.if_in_zonemap(ith_khash,token_id) == false){
-        //         tmp_prefilter_size = i+1;
-        //         break;
-        //     }
-        // }
-        // if(tmp_prefilter_size>prefilter_size){
-        //     cout<<"tmp_prefilter_size larger: "<<tmp_prefilter_size<<endl;
-        // }
-
-        // prefilter_size = max(prefilter_size,tmp_prefilter_size);
 
         double getCwsCost = 0;
         unsigned long long prefilter_cws_amount = 0;
@@ -176,12 +169,7 @@ private:
                 if (groups_tokens[doc_id] + prefilter_size - i < tmp_thres)
                     continue;
 
-                if (groups.count(doc_id)) {
-                    groups[doc_id].emplace_back(cw);
-                } else {
-                    vector<CW> &tmp_vet = groups[doc_id];
-                    tmp_vet.emplace_back(cw);
-                }
+                groups[doc_id].emplace_back(cw);;
 
                 if (pre_docId != doc_id) {
                     groups_tokens[doc_id]++;
@@ -192,7 +180,6 @@ private:
 
         IO_time += getCwsCost;
         cout << "prefilter_cws_amount: " << prefilter_cws_amount << endl;
-        cout << "prefilter_size: " << prefilter_size << endl;
         cout << "Get Cw cost time: " << getCwsCost << endl;
         cout << "Prefilter load cw Got Cost: " << RepTime(timerOn) << endl;
         cout << "Current Groups amount: " << groups.size() << endl;
@@ -211,6 +198,7 @@ private:
         for (auto const &it : its) {
             // filter each group's size
             int doc_id = it->first;
+            
             assert(doc_id<docNum);
             if (groups_tokens[doc_id] < tmp_thres)
                 continue;
@@ -226,6 +214,8 @@ private:
 
 #pragma omp critical
             if (tmp_res.size() != 0) {
+                cout<<"prefix filter: "<< groups_tokens[doc_id] <<endl;
+                printf("Now Candidate text %d has %d cws\n",doc_id, groups[doc_id].size());
                 candidate_texts.emplace_back(doc_id);
             }
         }
@@ -234,7 +224,11 @@ private:
 
         cout << "Prefilter cal candidate text Got Cost: " << RepTime(timerOn) << endl;
         timerOn = LogTime();
-
+        
+        // show out all the candidate texts
+        for (auto const & candidate : candidate_texts)
+            cout << "one candidate text:" << candidate << endl;
+        
         // iterate the left indexs and load those cws in candidates texts
         for (int i = prefilter_size; i < k; i++) {
             int ith_khash = indexes[i].second;
@@ -255,32 +249,7 @@ private:
                 if (text_cws.size() == 0) {
                     continue;
                 }
-                // const auto &zonemp = zoneMaps[ith_khash][tokenId2index[ith_khash][token_id]];
-                                                                                
-                // // find the first pair that larger than (candid_text,0ULL)
-                // auto it = upper_bound(zonemp.begin(), zonemp.end(), make_pair(candid_text, 0ULL));
-                // if (it == zonemp.begin()) {
-                //     continue;
-                // }
-
-                // it--;
-                // pair<int, unsigned long long> val = *it;
-                // assert(val.first <= candid_text);
-
-                // unsigned long long offset = val.second;
-                // inFile.seekg(offset, ios::beg);
-                // CW tmp_cw;
-
-                // // load compat windows under specified T
-                // while (inFile.read((char *)&tmp_cw, sizeof(CW))) {
-                //     if (tmp_cw.T > candid_text) { // because the cw is ordered
-                //         break;
-                //     }
-
-                //     if (tmp_cw.T == candid_text) {
-                //         text_cws.emplace_back(tmp_cw);
-                //     }
-                // }
+        
                 IO_time += RepTime(timerOn);
                 assert(text_cws.size() < 50000); // the amount of compact windows in one text of one token normally is  low (lower than 1e4)
                 // if(text_cws.size()>0){

@@ -64,15 +64,20 @@ class ZoneMaps{
             assert(tokenId2index[ith_khash].count(token_id));
             const auto &zonemp = zoneMaps[ith_khash][tokenId2index[ith_khash][token_id]];
         
-            // find the first pair that larger than (candid_text,0ULL)
-            auto it = upper_bound(zonemp.begin(), zonemp.end(), make_pair(text_id, 0ULL));
-            if (it == zonemp.begin()) {
+            // find the first pair that lower and equal than (candid_text,0ULL)
+            auto it = lower_bound(zonemp.begin(), zonemp.end(), make_pair(text_id, 999999ULL));
+            if (it == zonemp.end()) {
                 return;
             }
 
-            it--;
+            if (it->first>text_id && it!=zonemp.begin())
+                it--;
             pair<int, unsigned long long> val = *it;
-            assert(val.first <= text_id);
+            if(val.first > text_id){
+                cout<<"zonemap first element: "<<zonemp.begin()->first<<endl;
+                cout<<"Val.first is bigger than text_id :"<<val.first<< " "<<text_id<<endl;
+            }
+            assert(val.first <= text_id);   
 
             unsigned long long offset = val.second;
             inFile.seekg(offset, ios::beg);

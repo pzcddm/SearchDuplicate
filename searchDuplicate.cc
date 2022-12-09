@@ -55,37 +55,38 @@ void display_parameters(const int &tokenNum, const int &k, const int &T, const f
 int main(int argc, char **argv) {
     // Fixed parameters
     string source_bin_file = "../dataset_tokenizedGbt2/openwebtext_gpt2.bin";
-    // string dataset = "pile";
-    string dataset = "openwebtext";
-    string tokSeqFile = "../SelfGenerationText/gpt2-medium-540L_50TOPK_400000S.bin";
+    string dataset = "pile";
+    // string dataset = "openwebtext";
+    // string tokSeqFile = "../SelfGenerationText/gpt2-medium-540L_50TOPK_400000S.bin";
+    // string tokSeqFile = "./openwebtext_sampled_docs.bin";
     // string tokSeqFile = "../SelfGenerationText/gpt-neo-540L_50TOPK_1_3B.bin";
-    // string tokSeqFile = "./pile_sampled_docs.bin";
+    string tokSeqFile = "./pile_sampled_docs.bin";
 
     wordNum = 50257;
-    docNum = 8013769; // the amount of texts in the dataset 210607728 8013769
+    docNum = 210607728; // the amount of texts in the dataset 210607728 8013769
     // int zoneMpSize = 8000; // the size of zonemaps under one hashfunction
-    int zoneMpSize = 8000;  //8000
+    int zoneMpSize = 50257;  //8000 50257
     int T = 50;            // the T used in generating compact windows
     int fixed_prefix = 64; // or 128
 
     bool if_showPassage = false;
-    int sample_sequence_num = 10000;
-    int sample_start = 44;
+    int sample_sequence_num = 10000; 
+    int sample_start = 0;
     int max_windows_num = 100;
     int max_k = 64;             // the maximum number of hash functions
     int k = 64;                 // the amount of hash functions intended to be used
     double prefix_length = 0.2; // control prefix length
-    float theta = 0.8;          // similarity threshold
-    int prefilter_size = int(ceil(0.2 * k) + k * prefix_length);
+    float theta = 0.8;          // similarity threshold 
+    int prefilter_size = int(ceil(0.2 * k) + k * prefix_length); 
 
-    // load document index
+    // load document index 
 
     string doc_index_file = "./doc_index/openwebtext_gpt2_docIndex.bin";
     vector<unsigned long long> doc_index;
     readDocInex(doc_index, doc_index_file);
 
     // load parameters
-    for (int i = 0; i < argc; i++) {
+    for (int i = 0; i < argc; i++) { 
         string arg = argv[i];
         if (arg == "-dataset") {
             dataset = string(argv[i + 1]);

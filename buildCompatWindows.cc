@@ -175,8 +175,8 @@ int main(int argc, char **argv) {
         cout << "Partition Algo Over" << endl;
         // Merge inverted list generated from different threads and sort it
         vector<vector<CW>> res_cws(tokenNum);
-// #pragma omp parallel for reduction(+ \
-//                                    : total_cws_amount)
+#pragma omp parallel for reduction(+ \
+                                   : total_cws_amount)
         for (int j = 0; j < tokenNum; j++) {
             for (int tid = 0; tid < thread_num; tid++) {
                 res_cws[j].insert(res_cws[j].end(), tmp_vetor[tid][j].begin(), tmp_vetor[tid][j].end());
