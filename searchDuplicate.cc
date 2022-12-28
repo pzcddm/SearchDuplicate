@@ -50,7 +50,7 @@ int reportPassagesNum(const vector<CW> &duplicateCWs) {
 
 void display_parameters(const int &tokenNum, const int &k, const int &T, const float &theta, const int &zoneMpSize, const int &fixed_prefixe, const int &sample_sequence) {
     printf("tokenNum: %d ,k: %d , T:%d , theta:%f, zoneMpSize: %d fixed_prefix: %d total_sample_sequence %d \n", tokenNum, k, T, theta, zoneMpSize, fixed_prefixe, sample_sequence);
-}
+} 
 
 int main(int argc, char **argv) {
     // Fixed parameters

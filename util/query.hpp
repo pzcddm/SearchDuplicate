@@ -86,10 +86,10 @@ public:
             else
                 cout << candid_tid <<" has cws :" <<cw_vet.size()<<endl;
 
-            // output all the compact windows
-            for (const auto &cw: cw_vet){
-                cw.display();
-            }
+            // // output all the compact windows
+            // for (const auto &cw: cw_vet){
+            //     cw.display();
+            // }
             filtered_groupNum++;
             // Implement LineSweep Algorithm to find the intersection of intervals and get the result
             vector<CW> tmp_res;

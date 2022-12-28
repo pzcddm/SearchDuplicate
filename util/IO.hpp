@@ -5,8 +5,37 @@
 #include <unistd.h>
 
 #include "indexItem.hpp"
+#include "docIndex.hpp"
 #include "bigIndexItem.hpp"
 using namespace std;
+
+// load docIndexs into docIndexArr from the given file 
+void loadDocIndex(DocIndex ** &docIndexArr, const int wordNum, const int &k, const string &docIndex_file_path) {
+    printf("------------------Loading DocIndex File------------------\n");
+    docIndexArr = new DocIndex *[k];
+
+    for (int i = 0; i < k; i++) {
+        docIndexArr[i] = new DocIndex[wordNum];
+    }
+
+    ifstream inFile(docIndex_file_path, ios::in | ios::binary);
+    if (!inFile) {
+        cout << "error open DocIndex file" << endl;
+        return;
+    }
+
+    for (int i = 0; i < k; i++) {
+        for (int j = 0; j < wordNum; j++) {
+            inFile.read((char *)&docIndexArr[i][j], sizeof(DocIndex));
+            if (docIndexArr[i][j].docs_num == -1) {
+                cout << i << " " << j << endl;
+                cout << docIndexArr[i][j].t_offset << " " << docIndexArr[i][j].ofs_offset << endl;
+            }
+        }
+    }
+    inFile.close();
+    printf("------------------Index DocIndex Loaded------------------\n");
+}
 
 // load index items into indexArr from the given file 
 void loadBigIndexItem(BigIndexItem ** &indexArr, const int wordNum, const int &k, const string &index_file) {
