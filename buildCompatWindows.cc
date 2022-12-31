@@ -61,17 +61,9 @@ void generateCompatWindow(const int &doc_id, const vector<int> &doc, vector<pair
 
     partition(doc_id, doc, seg, 0, doc.size() - 1, res_cws);
 }
+
 void display_parameters(const int &tokenNum, const int &k, const int &T, const int &zonemap_interval, const int &zoneMpSize) {
     printf("tokenNum: %d ,k: %d , T:%d , zonemap_interval: %d, zoneMpSize: %d\n", tokenNum, k, T, zonemap_interval, zoneMpSize);
-}
-
-string createRootDir(const int &tokenNum, const int &k, const int &T, const int & doc_lim,  const int &zoneMpSize, const string & dataset_name){
-    char root_dir_path[50];
-    sprintf(root_dir_path,"%s_%dK_%dk_%dT_%dM_%dZP",dataset_name.c_str(),tokenNum/1000,k,T,doc_lim/1000000, zoneMpSize);
-    mkdir(root_dir_path,S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
-
-    string str(root_dir_path);
-    return str;
 }
 
 // Todo: Build Index to memory

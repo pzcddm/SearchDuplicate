@@ -178,6 +178,17 @@ string getRootDir(const int &tokenNum, const int &k, const int &T, const int &do
     return str;
 }
 
+string createRootDir(const int &tokenNum, const int &k, const int &T, const int & doc_lim,  const int &zoneMpSize, const string & dataset_name){
+    char root_dir_path[50];
+    sprintf(root_dir_path,"%s_%dK_%dk_%dT_%dM_%dZP",dataset_name.c_str(),tokenNum/1000,k,T,doc_lim/1000000, zoneMpSize);
+    if(!IsFileExist(root_dir_path.c_str())){
+        mkdir(root_dir_path,S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
+        printf("%s Directory Made\n", root_dir_path.c_str());
+    }   
+    string str(root_dir_path);
+    return str;
+}
+
 void getSonDir(const string &root_path, string &cw_dir, string &index_file, string &zonemap_dir) {
     cw_dir = root_path + "/compatWindows/";
     index_file = root_path + "/index.bin";
@@ -190,15 +201,37 @@ void getScatteredSonDir(const string &scattered_dir, string &cw_dir, string &ind
     zonemap_dir = scattered_dir + "zonemap/";
 }
 
+void createDocIndexSonDir(const string& root_path, string & docIndex_filePath, string & t_dirPath, string& docOfs_dirPath){
+    docIndex_filePath = root_path+"/docIndex.bin";
+    t_dirPath = root_path+"/t/";
+    docOfs_dirPath = root_path+"/docOfs/";
+
+    // create directory for cw dir and zonemap_dir if they do not exist
+    if(!IsFileExist(t_dirPath.c_str())){
+        mkdir(t_dirPath.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
+        printf("%s Directory Made\n", t_dirPath.c_str());
+    }
+        
+    if(!IsFileExist(docOfs_dirPath.c_str())){
+        mkdir(docOfs_dirPath.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
+        printf("%s Directory Made\n", docOfs_dirPath.c_str());
+    }
+}
+
 void createSonDir(const string& root_path, string & cw_dir, string & index_file, string& zonemap_dir){
     cw_dir = root_path+"/compatWindows/";
     index_file = root_path+"/index.bin";
     zonemap_dir = root_path+"/zonemap/";
 
-    // create directory for cw dir and zonemap_dir
-    mkdir(cw_dir.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO); 
-    mkdir(zonemap_dir.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
-    printf("Directory Made\n");
+    // create directory for cw dir and zonemap_dir if they do not exist
+    if(!IsFileExist(cw_dir.c_str())){
+        mkdir(cw_dir.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
+        printf("%s Directory Made\n", cw_dir.c_str());
+    }   
+    if(!IsFileExist(zonemap_dir.c_str())){
+        mkdir(zonemap_dir.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
+        printf("%s Directory Made\n", zonemap_dir.c_str());
+    }
 }
 
 
