@@ -9,7 +9,7 @@ all: $(METHOD)
 buildCompatWindows: buildCompatWindows.cc util/IO.hpp util/indexItem.hpp util/cw.hpp util/new_utils.hpp
 	${COMPILER} ${CPPFLAGS} -o $@ $<
 
-searchDuplicate: searchDuplicate.cc util/IO.hpp util/indexItem.hpp util/cw.hpp util/new_utils.hpp util/query.hpp util/dupSearch/segmentTree.hpp
+searchDuplicate: searchDuplicate.cc util/IO.hpp util/ds/indexItem.hpp util/ds/cw.hpp util/new_utils.hpp util/query.hpp util/queryFaster.hpp util/dupSearch/segmentTree.hpp
 	${COMPILER} ${CPPFLAGS} -o $@ $<
 
 buildLargeNumWindows: buildLargeNumWindows.cc util/IO.hpp util/indexItem.hpp util/cw.hpp util/new_utils.hpp

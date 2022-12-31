@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
             } 
             if (tokenNum == 128000){
                 scr_dir = "/common/users/zp128/openwebtext_128K_vocal/";
-            } 
+            }
         }
         if (arg == "-k"){
             k = atoi(argv[i+1]);
@@ -217,7 +217,6 @@ int main(int argc, char **argv) {
                             stride = zonemp_interval;
                         }
                     }
-
                     // update the pre cw's text id
                     pre_text_id = cw.T;
                     tmp_offset += sizeof(CW);

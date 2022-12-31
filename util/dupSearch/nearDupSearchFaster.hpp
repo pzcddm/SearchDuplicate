@@ -1,7 +1,7 @@
 #pragma once
 #include <bits/stdc++.h>
 
-#include "../cw.hpp"
+#include "../ds/cw.hpp"
 #include "segmentTree.hpp"
 #include "discretization.hpp"
 

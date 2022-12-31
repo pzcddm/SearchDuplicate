@@ -5,17 +5,20 @@
 #include <map>
 
 // #include "util/nearDupSearch.hpp"
-#include "util/cw.hpp"
+#include "util/ds/cw.hpp"
+#include "util/ds/docIndex.hpp"
 #include "util/IO.hpp"
 
 #include "util/utils.hpp"
 #include "util/new_utils.hpp"
-#include "util/indexItem.hpp"
-#include "util/query.hpp"
+#include "util/ds/indexItem.hpp"
+// #include "util/query.hpp"
+#include "util/queryFaster.hpp"
 #include "util/dupSearch/segmentTree.hpp"
 using namespace std;
 
 // global variables
+DocIndex** docIndexArr;
 BigIndexItem **indexArr;
 vector<SegmentTree> trees;
 ZoneMaps zonemaps;
@@ -75,7 +78,7 @@ int main(int argc, char **argv) {
     int max_windows_num = 100;
     int max_k = 64;             // the maximum number of hash functions
     int k = 64;                 // the amount of hash functions intended to be used
-    double prefix_length = 0.2; // control prefix length
+    double prefix_length = 0.15; // control prefix length
     float theta = 0.8;          // similarity threshold 
     int prefilter_size = int(ceil(0.2 * k) + k * prefix_length); 
 
@@ -144,6 +147,13 @@ int main(int argc, char **argv) {
     // load the IndexItem
     loadBigIndexItem(indexArr, wordNum, max_k, indexFile);
 
+    // load the docIndex
+    string docIndex_file_path = "./index/pile_50K_64k_50T_210M_50257ZP/docIndex.bin";
+    loadDocIndex(docIndexArr, wordNum, max_k, docIndex_file_path);
+
+    string t_dir_path = "./index/pile_50K_64k_50T_210M_50257ZP/t/";
+    string docOfs_dir_path = "./index/pile_50K_64k_50T_210M_50257ZP/docOfs/";
+
     cout << "first tokenized seq Num" << tokenizedSeqs[0].size() << endl;
 
     // create random shuffle array to random sample the tokenizeSeq
@@ -192,8 +202,8 @@ int main(int argc, char **argv) {
             seq.assign(raw_seq.begin() + j, raw_seq.begin() + fixed_prefix + j);
             double query_time;
             unsigned int cwNum = 0;
-            Query query(seq, theta, k, cw_dir, prefilter_size);
-
+            // Query query(seq, theta, k, cw_dir, prefilter_size);
+            QueryFaster query(seq, theta, k, cw_dir, prefilter_size, t_dir_path, docOfs_dir_path);
             // Search near duplicate sentence
             vector<CW> duplicateCWs = query.getResult(cwNum, query_time);
             total_IO_time += query.getIOtime();

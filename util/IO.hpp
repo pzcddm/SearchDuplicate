@@ -4,9 +4,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "indexItem.hpp"
-#include "docIndex.hpp"
-#include "bigIndexItem.hpp"
+#include "ds/indexItem.hpp"
+#include "ds/docIndex.hpp"
+#include "ds/bigIndexItem.hpp"
 using namespace std;
 
 // load docIndexs into docIndexArr from the given file 
@@ -181,9 +181,9 @@ string getRootDir(const int &tokenNum, const int &k, const int &T, const int &do
 string createRootDir(const int &tokenNum, const int &k, const int &T, const int & doc_lim,  const int &zoneMpSize, const string & dataset_name){
     char root_dir_path[50];
     sprintf(root_dir_path,"%s_%dK_%dk_%dT_%dM_%dZP",dataset_name.c_str(),tokenNum/1000,k,T,doc_lim/1000000, zoneMpSize);
-    if(!IsFileExist(root_dir_path.c_str())){
+    if(!IsFileExist(root_dir_path)){
         mkdir(root_dir_path,S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
-        printf("%s Directory Made\n", root_dir_path.c_str());
+        printf("%s Directory Made\n", root_dir_path);
     }   
     string str(root_dir_path);
     return str;

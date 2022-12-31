@@ -7,14 +7,14 @@
 #include <vector>
 #include <omp.h>
 
-#include "docIndex.hpp"
-#include "bigIndexItem.hpp"
+#include "ds/docIndex.hpp"
+#include "ds/bigIndexItem.hpp"
 #include "new_utils.hpp"
 #include "utils.hpp"
 
 #include "dupSearch/segmentTree.hpp"
 #include "dupSearch/nearDupSearchFaster.hpp"
-#include "zoneMap.hpp"
+#include "ds/zoneMap.hpp"
 
 using namespace std;
 
@@ -26,7 +26,7 @@ extern int docNum;
 extern ZoneMaps zonemaps;
 extern vector<SegmentTree> trees;
 
-class Query {
+class QueryFaster {
     vector<int> seqTokenized;
     float theta;        // threshold that is lower than 1
     int k;              // the num of hash functions that use
@@ -38,10 +38,10 @@ private:
     double IO_time = 0;
 
 public:
-    Query() {
+    QueryFaster() {
     }
 
-    Query(const vector<int> &_seq, float _theta, int _k, string _cws_dir, int _prefilter_size, string _t_dir_path, string _docOfs_dir_path):
+    QueryFaster(const vector<int> &_seq, float _theta, int _k, string _cws_dir, int _prefilter_size, string _t_dir_path, string _docOfs_dir_path):
         seqTokenized(_seq), theta(_theta), k(_k), cws_dir(_cws_dir), prefilter_size(_prefilter_size), t_dir_path(_t_dir_path), docOfs_dir_path(_docOfs_dir_path) {
         assert(theta <= 1.0);
     }
@@ -138,54 +138,62 @@ private:
 
         assert(minHashesToken.size() == k);
 
-        vector<pair<BigIndexItem, int>> indexes(k);
+        vector<pair<DocIndex,int>> doc_indexes(k);
         for (int i = 0; i < minHashesToken.size(); i++) {
-            int token_id = minHashesToken[i];
-            if (token_id < 0 || token_id >= wordNum) {
-                cout << "Error! token id Error" << token_id << endl;
-            }
-            assert(token_id >= 0 && token_id < wordNum);
-            indexes[i] = make_pair(indexArr[i][token_id], i);
+            doc_indexes[i] = make_pair(docIndexArr[i][minHashesToken[i]], i);
         }
+        sort(doc_indexes.begin(), doc_indexes.end());
 
-        sort(indexes.begin(), indexes.end());
-        vector<int> groups_tokens(docNum);
+        double getTCost = 0;
 
-        double getCwsCost = 0;
-        unsigned long long prefilter_cws_amount = 0;
-        int tmp_thres = prefilter_size - (k - thres);
+        // count how many tokens in each document under the sorted hash functions in the range of 0 to prefilter_size-1
+        vector<vector<pair<int,unsigned>>> doc_tokens_count(docNum);
+        int min_tokens_count = prefilter_size - (k - thres);
         for (int i = 0; i < prefilter_size; i++) {
             auto timerOn = LogTime();
-            vector<CW> cw_vet;
-            string cws_file = cws_dir + to_string(indexes[i].second) + ".bin";
-            indexes[i].first.getCompatWindows(cws_file, cw_vet);
-            prefilter_cws_amount += cw_vet.size();
-            getCwsCost += RepTime(timerOn);
-            // cout << "cws length " << cw_vet.size() << endl;
 
-            int pre_docId = -1;
-            for (auto &cw : cw_vet) {
-                int doc_id = cw.T;
+            // get the docsList
+            auto ith_hashFun = doc_indexes[i].second;
+            string t_file = t_dir_path + to_string(ith_hashFun) + ".bin";
+            vector<int> t_vet;
+            doc_indexes[i].first.getDocsList(t_file, t_vet);
 
-                if (groups_tokens[doc_id] + prefilter_size - i < tmp_thres)
-                    continue;
+            getTCost += RepTime(timerOn);
 
-                groups[doc_id].emplace_back(cw);;
+            // store the i and the t's position in t_vet into doc_tokens_count[t]
+            for(unsigned j = 0;j<t_vet.size();j++){
+                int t = t_vet[j];
+                doc_tokens_count[t].emplace_back(i,j);
+            }
+        }
+        
+        IO_time += getTCost;
+        cout << "Get T cost time: " << getTCost << endl;
+        cout << "Prefilter load T Got Cost: " << RepTime(timerOn) << endl;
+        timerOn = LogTime();
 
-                if (pre_docId != doc_id) {
-                    groups_tokens[doc_id]++;
-                    pre_docId = doc_id;
+        // get the documents that have enough tokens and their compact windows and store them into candidate texts(an unordered_map)
+        for(int i =0; i<docNum;i++){
+            if(doc_tokens_count[i].size()>=min_tokens_count){
+                vector<CW> tmp_cws;
+                for(auto const& p:doc_tokens_count[i]){
+                    auto ith_hashFun = doc_indexes[p.first].second;
+                    auto token_id = minHashesToken[ith_hashFun];
+                    string ofs_file = docOfs_dir_path + to_string(ith_hashFun)+".bin";
+                    auto specified_docOffset = doc_indexes[p.first].first.getSpecifiedDocOffset(ofs_file, p.second);
+
+                    string cw_filePath = cws_dir + to_string(ith_hashFun) + ".bin";
+                    indexArr[ith_hashFun][token_id].getOneDocumentCWs(cw_filePath, specified_docOffset, tmp_cws);
+                }
+
+                for(auto const & cw:tmp_cws){
+                    groups[i].emplace_back(cw);
+                    assert(cw.T == i);
                 }
             }
         }
 
-        IO_time += getCwsCost;
-        cout << "prefilter_cws_amount: " << prefilter_cws_amount << endl;
-        cout << "Get Cw cost time: " << getCwsCost << endl;
-        cout << "Prefilter load cw Got Cost: " << RepTime(timerOn) << endl;
-        cout << "Current Groups amount: " << groups.size() << endl;
-        timerOn = LogTime();
-
+        printf("Primary Candidate Group Size: %u\n", groups.size());
         // get candidate texts
         vector<unordered_map<int, vector<CW>>::iterator> its(groups.size());
         int cnt = 0;
@@ -201,8 +209,6 @@ private:
             int doc_id = it->first;
             
             assert(doc_id<docNum);
-            if (groups_tokens[doc_id] < tmp_thres)
-                continue;
             firstFileterNum++;
 
             // Implement LineSweep Algorithm to find the intersection of intervals
@@ -211,12 +217,12 @@ private:
 
             // nearDupSearch(it->second, tmp_thres, tmp_res, tmp_winNum);
             int thread_id = omp_get_thread_num();
-            nearDupSearchFaster(it->second, tmp_thres, tmp_res, trees[thread_id]);
+            nearDupSearchFaster(it->second, min_tokens_count, tmp_res, trees[thread_id]);
 
 #pragma omp critical
             if (tmp_res.size() != 0) {
-                cout<<"prefix filter: "<< groups_tokens[doc_id] <<endl;
-                printf("Now Candidate text %d has %d cws\n",doc_id, groups[doc_id].size());
+                cout<<"prefix filter: "<< doc_tokens_count[doc_id].size() <<endl;
+                printf("Now Candidate text %d has %ld cws\n",doc_id, groups[doc_id].size());
                 candidate_texts.emplace_back(doc_id);
             }
         }
@@ -232,7 +238,7 @@ private:
         
         // iterate the left indexs and load those cws in candidates texts
         for (int i = prefilter_size; i < k; i++) {
-            int ith_khash = indexes[i].second;
+            int ith_khash = doc_indexes[i].second;
             int token_id = minHashesToken[ith_khash];
             string cws_file = cws_dir + to_string(ith_khash) + ".bin";
             ifstream inFile(cws_file, ios::in | ios::binary); //二进制读方式打开
