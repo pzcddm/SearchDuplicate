@@ -10,6 +10,9 @@
 */
 #include <fstream>
 #include <iostream>
+#include <cassert>
+
+#include "cw.hpp"
 using namespace std;
 class DocIndex {
 public:
@@ -73,5 +76,38 @@ public:
         inFile.close();
 
         return res_offset;
+    }
+
+    void getSpecifiedOffsets(const string &ofs_file, const vector<unsigned> &pos_vet, vector<pair<unsigned long long, int>> &res_ofs_vets) {
+        ifstream inFile(ofs_file, ios::in | ios::binary); // Open in binary read mode
+
+        // Check whether the file is opened successfully
+        if (!inFile) {
+            cout << "error open ofs_file file" << endl;
+            return;
+        }
+
+        res_ofs_vets.resize(pos_vet.size());
+        for (int i = 0; i < pos_vet.size(); i++) {
+            auto const &pos = pos_vet[i];
+            auto corr_ofs = ofs_offset + pos * sizeof(unsigned long long);
+            inFile.seekg(corr_ofs, ios::beg); // Move the read pointer of the file
+            inFile.read((char *)&res_ofs_vets[i].first, sizeof(unsigned long long));
+
+            // get the next ofs so that we can calculate the cws amount of this document
+            if(inFile.peek() == EOF){
+                // because it is the last offset in this file so that we cannot get 
+                printf("Todo\n Special Condition\n");
+
+                // a great idea is get the size of the corresponding cws file so that we can caculate the amount of the last document in the cws file
+            }else{
+                unsigned long long next_ofs;
+                inFile.read((char *)&next_ofs, sizeof(unsigned long long));
+                assert(next_ofs>res_ofs_vets[i].first);
+                res_ofs_vets[i].second = unsigned(next_ofs - res_ofs_vets[i].first)/sizeof(CW);
+            }
+        }
+
+        inFile.close();
     }
 };

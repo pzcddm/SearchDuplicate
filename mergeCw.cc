@@ -13,18 +13,53 @@ const unsigned BUFFER_SIZE = 1e8;
 CW buffer[BUFFER_SIZE];
 unsigned long long file_size_debug = 0;
 
+string getScatteredRootDir(const string &parent_dir, const int &tokenNum, const int &k, const int &T, const int &doc_lim, const int &zoneMpSize, const string &dataset_name) {
+    char root_dir_path[50];
+    sprintf(root_dir_path, "%s/%s_%dK_%dk_%dT_%dM_%dZP_SCATTERED", parent_dir.c_str(), dataset_name.c_str(), tokenNum / 1000, k, T, doc_lim / 1000000, zoneMpSize);
+    if (IsFileExist(root_dir_path)) {
+        cout << "get the target root path" << endl;
+    } else {
+        cout << "Error! Target Root Dir not exist" << endl;
+    }
+
+    string str(root_dir_path);
+    cout << "Scattered Root Dir: " << str << endl;
+    return str;
+}
+
 int main() {
     // string scattered_dir = "./index/openwebtext_50K_64k_50T_8M_50257ZP_SCATTERED/";
     // string merged_dir = "./index/openwebtext_50K_64k_50T_8M_50257ZP_Merged/";
     string scattered_dir = "./index/pile_50K_64k_50T_210M_50257ZP_SCATTERED/";
     string merged_dir = "./index/pile_50K_64k_50T_210M_50257ZP/";
+
+    const string parent_dir = ".";
+    const string dataset = "pile";
     int tokenNum = 50257;
-    int doc_limit = 210607728;          // 8013769 210607728
+    int doc_limit = 210607728;        // 8013769 210607728
     int K = 64;                       // the number of hash functions
-    const int INTERVAL_LIMIT = 50;    // set the interval limit for generating compat windows
+    int INTERVAL_LIMIT = 50;          // set the interval limit for generating compat windows
     const int zonemp_interval = 5000; // the stride that decreasing when generating zonemap
     const int zoneMpSize = 50257;     // the size of zonemaps under one hashfunction
     const int scattered_num = 101;
+
+    // parse arguments
+    for (int i = 0; i < argc; i++) {
+        string arg = string(argv[i]);
+        if (arg == "-doc_limit") {
+            doc_limit = atoi(argv[i + 1]);
+        }
+        if (arg == "-k") {
+            k = atoi(argv[i + 1]);
+        }
+        if (arg == "-t") {
+            INTERVAL_LIMIT = atoi(argv[i + 1]);
+        }
+    }
+
+    // get the path of two directories
+    scattered_dir = getScatteredRootDir(parent_dir, tokenNum, K, INTERVAL_LIMIT, doc_limit, zoneMpSize, dataset);
+    merged_dir = getRootDir(parent_dir, tokenNum, K, INTERVAL_LIMIT, doc_limit, zoneMpSize, dataset);
 
     int pre_merge_pos = -1; // -1
     auto global_st = LogTime();
@@ -133,13 +168,13 @@ int main() {
                 unsigned long long ori_offset = index_vec[k][i][j].offset;
 
                 assert(tmp_windowsNum >= 0);
-                if(tmp_windowsNum>BUFFER_SIZE){
-                    cout<<tmp_windowsNum<<endl;
+                if (tmp_windowsNum > BUFFER_SIZE) {
+                    cout << tmp_windowsNum << endl;
                 }
                 // assert(tmp_windowsNum <= BUFFER_SIZE);
                 // read cws and write them
                 unsigned left_windowsNum = tmp_windowsNum;
-                while(left_windowsNum>BUFFER_SIZE){
+                while (left_windowsNum > BUFFER_SIZE) {
                     cws_ifstreams[k].read((char *)buffer, sizeof(CW) * BUFFER_SIZE);
                     merged_cws_ofstream.write((char *)buffer, sizeof(CW) * BUFFER_SIZE);
                     left_windowsNum -= BUFFER_SIZE;

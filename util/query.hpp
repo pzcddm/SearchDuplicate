@@ -7,14 +7,14 @@
 #include <vector>
 #include <omp.h>
 
-#include "indexItem.hpp"
-#include "bigIndexItem.hpp"
+#include "ds/indexItem.hpp"
+#include "ds/bigIndexItem.hpp"
 #include "new_utils.hpp"
 #include "utils.hpp"
 // #include "nearDupSearch.hpp"
 #include "dupSearch/segmentTree.hpp"
 #include "dupSearch/nearDupSearchFaster.hpp"
-#include "zoneMap.hpp"
+#include "ds/zoneMap.hpp"
 
 using namespace std;
 
@@ -83,8 +83,8 @@ public:
             auto const &cw_vet = doc_groups[candid_tid];
             if (cw_vet.size() < thres)
                 continue;
-            else
-                cout << candid_tid <<" has cws :" <<cw_vet.size()<<endl;
+            // else
+            //     cout << candid_tid <<" has cws :" <<cw_vet.size()<<endl;
 
             // // output all the compact windows
             // for (const auto &cw: cw_vet){
@@ -214,8 +214,8 @@ private:
 
 #pragma omp critical
             if (tmp_res.size() != 0) {
-                cout<<"prefix filter: "<< groups_tokens[doc_id] <<endl;
-                printf("Now Candidate text %d has %d cws\n",doc_id, groups[doc_id].size());
+                // cout<<"prefix filter: "<< groups_tokens[doc_id] <<endl;
+                // printf("Now Candidate text %d has %d cws\n",doc_id, groups[doc_id].size());
                 candidate_texts.emplace_back(doc_id);
             }
         }
@@ -225,9 +225,9 @@ private:
         cout << "Prefilter cal candidate text Got Cost: " << RepTime(timerOn) << endl;
         timerOn = LogTime();
         
-        // show out all the candidate texts
-        for (auto const & candidate : candidate_texts)
-            cout << "one candidate text:" << candidate << endl;
+        // // show out all the candidate texts
+        // for (auto const & candidate : candidate_texts)
+        //     cout << "one candidate text:" << candidate << endl;
         
         // iterate the left indexs and load those cws in candidates texts
         for (int i = prefilter_size; i < k; i++) {
@@ -241,7 +241,6 @@ private:
             }
             for (auto const &candid_text : candidate_texts) {
                 // use zone map
-
                 auto timerOn = LogTime();
 
                 vector<CW> text_cws;
@@ -251,7 +250,14 @@ private:
                 }
         
                 IO_time += RepTime(timerOn);
-                assert(text_cws.size() < 50000); // the amount of compact windows in one text of one token normally is  low (lower than 1e4)
+
+                if(text_cws.size() >= 50000){
+                    cout<<ith_khash<<" "<<token_id<<" "<<candid_text<<endl;
+                    // for(auto const &cw: text_cws){
+                    //     assert(cw.T == candid_text);
+                    // }
+                }
+                // assert(text_cws.size() < 50000); // the amount of compact windows in one text of one token normally is  low (lower than 1e4)
                 // if(text_cws.size()>0){
                 //     cout<<"text_cws size"<<text_cws.size()<<endl;
                 // }

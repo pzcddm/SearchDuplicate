@@ -61,4 +61,31 @@ public:
         
         inFile.close();
     }
+
+    // the CWS from these multiple document will be stored in the res_vet sequentially
+    void getMutipleDocumentCWs(const string& cw_file,const vector<pair<unsigned long long, int>> &ofs_vet, vector<CW> & res_cws){
+        printf("the size of ofs_vet: %lu\n", ofs_vet.size());
+        // count the total amount of cws in this load
+        unsigned long long total_cws_amount = 0;
+        for(auto const & pa : ofs_vet){
+            total_cws_amount += pa.second;
+        }
+
+        res_cws.resize(total_cws_amount);
+        
+        ifstream inFile(cw_file, ios::in | ios::binary); //二进制读方式打开
+        if (!inFile) {
+            cout << "error open file" << cw_file << endl;
+            return;
+        }
+
+        unsigned long long count = 0;
+        for(auto const & pa : ofs_vet){
+            inFile.seekg(pa.first,ios::beg);
+            inFile.read((char *)&res_cws[count], sizeof(CW)* pa.second);
+            count += pa.second;
+        }
+
+        inFile.close();
+    }   
 };

@@ -6,13 +6,13 @@ SRC_FILES := $(wildcard $(UTIL_DIR)/*.hpp)
 CPPFLAGS = -O3 -fopenmp -std=c++17
 all: $(METHOD)
 
-buildCompatWindows: buildCompatWindows.cc util/IO.hpp util/indexItem.hpp util/cw.hpp util/new_utils.hpp
+buildCompatWindows: buildCompatWindows.cc util/IO.hpp util/ds/indexItem.hpp util/ds/cw.hpp util/new_utils.hpp
 	${COMPILER} ${CPPFLAGS} -o $@ $<
 
 searchDuplicate: searchDuplicate.cc util/IO.hpp util/ds/indexItem.hpp util/ds/cw.hpp util/new_utils.hpp util/query.hpp util/queryFaster.hpp util/dupSearch/segmentTree.hpp
 	${COMPILER} ${CPPFLAGS} -o $@ $<
 
-buildLargeNumWindows: buildLargeNumWindows.cc util/IO.hpp util/indexItem.hpp util/cw.hpp util/new_utils.hpp
+buildLargeNumWindows: buildLargeNumWindows.cc util/IO.hpp util/ds/indexItem.hpp util/ds/cw.hpp util/new_utils.hpp
 	${COMPILER} ${CPPFLAGS} -o $@ $<
 
 mergeCw: mergeCw.cc util/IO.hpp util/indexItem.hpp util/cw.hpp util/new_utils.hpp

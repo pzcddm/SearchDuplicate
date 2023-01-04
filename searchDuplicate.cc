@@ -11,9 +11,9 @@
 
 #include "util/utils.hpp"
 #include "util/new_utils.hpp"
-#include "util/ds/indexItem.hpp"
-// #include "util/query.hpp"
-#include "util/queryFaster.hpp"
+#include "util/ds/bigIndexItem.hpp"
+#include "util/query.hpp"
+// #include "util/queryFaster.hpp"
 #include "util/dupSearch/segmentTree.hpp"
 using namespace std;
 
@@ -62,8 +62,8 @@ int main(int argc, char **argv) {
     // string dataset = "openwebtext";
     // string tokSeqFile = "../SelfGenerationText/gpt2-medium-540L_50TOPK_400000S.bin";
     // string tokSeqFile = "./openwebtext_sampled_docs.bin";
-    // string tokSeqFile = "../SelfGenerationText/gpt-neo-540L_50TOPK_1_3B.bin";
-    string tokSeqFile = "./pile_sampled_docs.bin";
+    string tokSeqFile = "../SelfGenerationText/gpt-neo-540L_50TOPK_1_3B.bin";
+    // string tokSeqFile = "./pile_sampled_docs.bin";
 
     wordNum = 50257;
     docNum = 210607728; // the amount of texts in the dataset 210607728 8013769
@@ -73,14 +73,14 @@ int main(int argc, char **argv) {
     int fixed_prefix = 64; // or 128
 
     bool if_showPassage = false;
-    int sample_sequence_num = 10000; 
+    int sample_sequence_num = 1000; 
     int sample_start = 0;
-    int max_windows_num = 100;
+    int max_windows_num = 10000;
     int max_k = 64;             // the maximum number of hash functions
     int k = 64;                 // the amount of hash functions intended to be used
-    double prefix_length = 0.15; // control prefix length
+    double prefix_length = 0.4; // control prefix length
     float theta = 0.8;          // similarity threshold 
-    int prefilter_size = int(ceil(0.2 * k) + k * prefix_length); 
+    int prefilter_size = int(ceil(k * prefix_length)); 
 
     // load document index 
 
@@ -202,8 +202,8 @@ int main(int argc, char **argv) {
             seq.assign(raw_seq.begin() + j, raw_seq.begin() + fixed_prefix + j);
             double query_time;
             unsigned int cwNum = 0;
-            // Query query(seq, theta, k, cw_dir, prefilter_size);
-            QueryFaster query(seq, theta, k, cw_dir, prefilter_size, t_dir_path, docOfs_dir_path);
+            Query query(seq, theta, k, cw_dir, prefilter_size);
+            // QueryFaster query(seq, theta, k, cw_dir, prefilter_size, t_dir_path, docOfs_dir_path);
             // Search near duplicate sentence
             vector<CW> duplicateCWs = query.getResult(cwNum, query_time);
             total_IO_time += query.getIOtime();

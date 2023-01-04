@@ -148,7 +148,10 @@ private:
 
         // count how many tokens in each document under the sorted hash functions in the range of 0 to prefilter_size-1
         vector<vector<pair<int,unsigned>>> doc_tokens_count(docNum);
+        unsigned primay_cands_amount = 0;
         int min_tokens_count = prefilter_size - (k - thres);
+        printf("Min_tokens_count:%d\n", min_tokens_count);
+        
         for (int i = 0; i < prefilter_size; i++) {
             auto timerOn = LogTime();
 
@@ -164,11 +167,15 @@ private:
             for(unsigned j = 0;j<t_vet.size();j++){
                 int t = t_vet[j];
                 doc_tokens_count[t].emplace_back(i,j);
+                if(doc_tokens_count[t].size()==min_tokens_count){
+                    primay_cands_amount++;
+                }
             }
         }
         
         IO_time += getTCost;
         cout << "Get T cost time: " << getTCost << endl;
+        cout << "Enough tokens candidate text amount: " << primay_cands_amount << endl;
         cout << "Prefilter load T Got Cost: " << RepTime(timerOn) << endl;
         timerOn = LogTime();
 
@@ -221,8 +228,8 @@ private:
 
 #pragma omp critical
             if (tmp_res.size() != 0) {
-                cout<<"prefix filter: "<< doc_tokens_count[doc_id].size() <<endl;
-                printf("Now Candidate text %d has %ld cws\n",doc_id, groups[doc_id].size());
+                // cout<<"prefix filter: "<< doc_tokens_count[doc_id].size() <<endl;
+                // printf("Now Candidate text %d has %ld cws\n",doc_id, groups[doc_id].size());
                 candidate_texts.emplace_back(doc_id);
             }
         }

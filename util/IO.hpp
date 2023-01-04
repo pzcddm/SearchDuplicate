@@ -164,9 +164,9 @@ int IsFileExist(const char *path) {
 }
 
 // get the create
-string getRootDir(const int &tokenNum, const int &k, const int &T, const int &doc_lim, const int &zoneMpSize, const string &dataset_name) {
+string getRootDir(const string & parent_dir, const int &tokenNum, const int &k, const int &T, const int &doc_lim, const int &zoneMpSize, const string &dataset_name) {
     char root_dir_path[50];
-    sprintf(root_dir_path, "./index/%s_%dK_%dk_%dT_%dM_%dZP", dataset_name.c_str(), tokenNum / 1000, k, T, doc_lim / 1000000, zoneMpSize);
+    sprintf(root_dir_path, "%s/%s_%dK_%dk_%dT_%dM_%dZP",parent_dir.c_str(), dataset_name.c_str(), tokenNum / 1000, k, T, doc_lim / 1000000, zoneMpSize);
     if (IsFileExist(root_dir_path)) {
         cout << "get the target root path" << endl;
     } else {
@@ -178,9 +178,9 @@ string getRootDir(const int &tokenNum, const int &k, const int &T, const int &do
     return str;
 }
 
-string createRootDir(const int &tokenNum, const int &k, const int &T, const int & doc_lim,  const int &zoneMpSize, const string & dataset_name){
+string createRootDir(const string & parent_dir, const int &tokenNum, const int &k, const int &T, const int & doc_lim,  const int &zoneMpSize, const string & dataset_name){
     char root_dir_path[50];
-    sprintf(root_dir_path,"%s_%dK_%dk_%dT_%dM_%dZP",dataset_name.c_str(),tokenNum/1000,k,T,doc_lim/1000000, zoneMpSize);
+    sprintf(root_dir_path,"%s/%s_%dK_%dk_%dT_%dM_%dZP",parent_dir.c_str(),dataset_name.c_str(),tokenNum/1000,k,T,doc_lim/1000000, zoneMpSize);
     if(!IsFileExist(root_dir_path)){
         mkdir(root_dir_path,S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
         printf("%s Directory Made\n", root_dir_path);
@@ -193,12 +193,51 @@ void getSonDir(const string &root_path, string &cw_dir, string &index_file, stri
     cw_dir = root_path + "/compatWindows/";
     index_file = root_path + "/index.bin";
     zonemap_dir = root_path + "/zonemap/";
+
+    // create directory for cw dir and zonemap_dir if they do not exist
+    if(!IsFileExist(cw_dir.c_str())){
+        printf("%s Directory No exist\n", cw_dir.c_str());
+    }   
+    if(!IsFileExist(zonemap_dir.c_str())){
+        printf("%s Directory No exist\n", zonemap_dir.c_str());
+    }
+}
+
+void createSonDir(const string& root_path, string & cw_dir, string & index_file, string& zonemap_dir){
+    cw_dir = root_path+"/compatWindows/";
+    index_file = root_path+"/index.bin";
+    zonemap_dir = root_path+"/zonemap/";
+
+    // create directory for cw dir and zonemap_dir if they do not exist
+    if(!IsFileExist(cw_dir.c_str())){
+        mkdir(cw_dir.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
+        printf("%s Directory Made\n", cw_dir.c_str());
+    }   
+    if(!IsFileExist(zonemap_dir.c_str())){
+        mkdir(zonemap_dir.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
+        printf("%s Directory Made\n", zonemap_dir.c_str());
+    }
 }
 
 void getScatteredSonDir(const string &scattered_dir, string &cw_dir, string &index_dir, string &zonemap_dir) {
     cw_dir = scattered_dir + "compatWindows/";
     index_dir = scattered_dir + "index/";
     zonemap_dir = scattered_dir + "zonemap/";
+}
+
+void getDocIndexSonDir(const string& root_path, string & docIndex_filePath, string & t_dirPath, string& docOfs_dirPath){
+    docIndex_filePath = root_path+"/docIndex.bin";
+    t_dirPath = root_path+"/t/";
+    docOfs_dirPath = root_path+"/docOfs/";
+
+    // create directory for cw dir and zonemap_dir if they do not exist
+    if(!IsFileExist(t_dirPath.c_str())){
+        printf("%s Directory No exist\n", t_dirPath.c_str());
+    }
+        
+    if(!IsFileExist(docOfs_dirPath.c_str())){
+        printf("%s Directory No exist\n", docOfs_dirPath.c_str());
+    }
 }
 
 void createDocIndexSonDir(const string& root_path, string & docIndex_filePath, string & t_dirPath, string& docOfs_dirPath){
@@ -218,21 +257,7 @@ void createDocIndexSonDir(const string& root_path, string & docIndex_filePath, s
     }
 }
 
-void createSonDir(const string& root_path, string & cw_dir, string & index_file, string& zonemap_dir){
-    cw_dir = root_path+"/compatWindows/";
-    index_file = root_path+"/index.bin";
-    zonemap_dir = root_path+"/zonemap/";
 
-    // create directory for cw dir and zonemap_dir if they do not exist
-    if(!IsFileExist(cw_dir.c_str())){
-        mkdir(cw_dir.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
-        printf("%s Directory Made\n", cw_dir.c_str());
-    }   
-    if(!IsFileExist(zonemap_dir.c_str())){
-        mkdir(zonemap_dir.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
-        printf("%s Directory Made\n", zonemap_dir.c_str());
-    }
-}
 
 
 void readDocInex(vector<unsigned long long> & doc_index, const string & docIndex_file){

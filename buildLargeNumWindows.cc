@@ -4,8 +4,8 @@
 // #include "util/utils.hpp"
 #include "util/new_utils.hpp"
 #include "util/IO.hpp"
-#include "util/cw.hpp"
-#include "util/indexItem.hpp"
+#include "util/ds/cw.hpp"
+#include "util/ds/indexItem.hpp"
 
 int INTERVAL_LIMIT;
 int tokenNum;
@@ -111,15 +111,15 @@ void createSonDir(const string &root_path, string &cw_dir, string &index_dir, st
 // Todo: Build Index to memory
 int main(int argc, char **argv) {
     // string scr_dir = "../openwebtext_64K_vocal/";
-    // string src_file = "../dataset_tokenizedGbt2/pile_gpt2.bin";
+    string src_file = "../dataset_tokenizedGbt2/pile_gpt2.bin";
     // string dataset_name = "pile";
-    string src_file = "../dataset_tokenizedGbt2/openwebtext_gpt2.bin";
-    string dataset_name = "openwebtext";
+    // string src_file = "../dataset_tokenizedGbt2/openwebtext_gpt2.bin";
+    string dataset_name = "pile";
     tokenNum = 50257;
-    int doc_limit = 8013769;          // 8013769 210607728
+    int doc_limit = 210607728;          // 8013769 210607728
     int epoch_docNum = doc_limit / 100; // the maximun number of documents that are iterated in a epoch
     int k = 32;                         // the number of hash functions
-    INTERVAL_LIMIT = 25;                // set the interval limit for generating compat windows
+    INTERVAL_LIMIT = 50;                // set the interval limit for generating compat windows
     const int zonemp_interval = 5000;   // the stride that decreasing when generating zonemap
     const int zoneMpSize = 50257;        // the size of zonemaps under one hashfunction
 
@@ -131,8 +131,6 @@ int main(int argc, char **argv) {
         if (arg == "-k") {
             k = atoi(argv[i + 1]);
         }
-
-
         if (arg == "-t") {
             INTERVAL_LIMIT = atoi(argv[i + 1]);
         }
@@ -319,7 +317,7 @@ int main(int argc, char **argv) {
             
             epochs++;
 
-            system("keep-job 48");
+            // system("keep-job 48");
 
             // clear docs 
             docs.clear();

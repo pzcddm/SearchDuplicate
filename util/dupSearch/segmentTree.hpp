@@ -5,7 +5,7 @@ If there are duplicate maximums, the position is that of the rightest one.
 #pragma once
 #include <bits/stdc++.h>
 using namespace std;
-const int MAX_LEN = 50000;
+const int MAX_LEN = 100000;
 
 class SegmentTree {
     // Update nodes from bottom to top

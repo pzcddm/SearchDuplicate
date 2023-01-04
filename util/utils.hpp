@@ -1,8 +1,6 @@
 #pragma once
 
-#include <locale>
-#include <codecvt>
-#include <tuple>
+#include <bits/stdc++.h>
 
 using namespace std;
 int K = 16;

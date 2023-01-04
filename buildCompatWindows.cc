@@ -3,16 +3,18 @@
 #include <iostream>
 #include <fstream>
 #include <omp.h>
-// #include "util/utils.hpp"
+#include "util/utils.hpp"
 #include "util/new_utils.hpp"
 #include "util/IO.hpp"
-#include "util/cw.hpp"
-#include "util/indexItem.hpp"
+#include "util/ds/cw.hpp"
+#include "util/ds/indexItem.hpp"
 
 int INTERVAL_LIMIT;
 int tokenNum;
 
 #define MAX_LENGTH 2000000
+
+using namespace std;
 
 // Partition algorithm: In each recurrence, it will search and minimun element in current range and split the range into two pieces
 void partition(const int &doc_id, const vector<int> &doc, const vector<pair<int, int>> &seg, int l, int r, vector<vector<CW>> &res_cws) {
@@ -69,10 +71,11 @@ void display_parameters(const int &tokenNum, const int &k, const int &T, const i
 // Todo: Build Index to memory
 int main(int argc, char **argv) {
     string scr_dir = "../openwebtext_64K_vocal/";
-    string src_file = "../dataset_tokenizedGbt2/openwebtext_gpt2.bin";
-    string dataset_name = "openwebtext";
+    // string src_file = "../dataset_tokenizedGbt2/openwebtext_gpt2.bin";
+    string src_file = "../dataset_tokenizedGbt2/pile_gpt2.bin";
+    string dataset_name = "pile";
     tokenNum = 50257;
-    int doc_limit = 8013769; //8013769
+    int doc_limit = 210607728; //8013769  210607728
     int k = 32;                        // the number of hash functions
     INTERVAL_LIMIT = 50;               // set the interval limit for generating compat windows
     const int zonemp_interval = 1000;  // the stride that decreasing when generating zonemap
@@ -105,10 +108,11 @@ int main(int argc, char **argv) {
     }
 
     // Storage location of results and create them
+    string parent_dir = "./index";
     string cw_dir;
     string index_file;
     string zoneMap_dir;
-    string root_dir = createRootDir(tokenNum, k,INTERVAL_LIMIT,doc_limit, zoneMpSize, dataset_name);
+    string root_dir = createRootDir(parent_dir, tokenNum, k,INTERVAL_LIMIT,doc_limit, zoneMpSize, dataset_name);
     createSonDir(root_dir, cw_dir, index_file, zoneMap_dir);
     
     //the hash functions' seeds are 1 to k (cannot use 0 and 1 both together because their hash functions are the same)
@@ -200,7 +204,7 @@ int main(int argc, char **argv) {
         auto writingDiskTimer = LogTime();
 
         // write these cws into a file
-        string save_path = cw_dir + to_string(i) + ".bin";
+        string save_path = cw_dir + to_string(i)  + ".bin";
         ofstream outFile(save_path, ios::out | ios::binary);
 
         unsigned long long offset = 0;
