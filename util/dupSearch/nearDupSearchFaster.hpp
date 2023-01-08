@@ -27,7 +27,7 @@ struct Point {
     }
 };
 
-void nearDupSearchFaster(const vector<CW> &cw_vet, const int thres, vector<CW> &res, SegmentTree &segTree) {
+int nearDupSearchFaster(const vector<CW> &cw_vet, const int thres, vector<CW> &res, SegmentTree &segTree) {
     // Get the points from the 1D interval of these compat windows
     vector<Point> points(cw_vet.size() * 2);
     int doc_id = cw_vet[0].T;
@@ -60,6 +60,7 @@ void nearDupSearchFaster(const vector<CW> &cw_vet, const int thres, vector<CW> &
     unordered_set<int> ids;
     int pre_pos = -1;
     int current_pos = points[0].pos;
+    int max_collide_amount = 0;
     for (int i = 0; i < points.size(); i++) {
         // check If iterate to a new position
         if (i > 0 && points[i].pos != points[i - 1].pos) {
@@ -76,6 +77,7 @@ void nearDupSearchFaster(const vector<CW> &cw_vet, const int thres, vector<CW> &
 
                     // cout<< "currentpos and rev_discret"<<current_pos<<" "<<rev_discret_pos<<endl;
                     assert(current_pos - 1 <= rev_discret_pos);
+                    max_collide_amount = max(max_collide_amount, query_pair.first);
                     res.emplace_back(doc_id, pre_pos, query_pair.first, rev_discret_pos); // because of right open interval the r should be minused 1
                     // printf("(%d,%d,%d,%d)\n",pre_pos, current_pos, interval.first, interval.second);
                 }
@@ -107,5 +109,5 @@ void nearDupSearchFaster(const vector<CW> &cw_vet, const int thres, vector<CW> &
         }
     }
     segTree.clean();
-    return;
+    return max_collide_amount;
 }

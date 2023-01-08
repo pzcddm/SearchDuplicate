@@ -93,6 +93,9 @@ class ZoneMaps{
                     text_cws.emplace_back(tmp_cw);
                 }
             }
+
+            inFile.clear();
+            inFile.seekg (0);
             return;
         }
 };

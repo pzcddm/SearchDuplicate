@@ -24,7 +24,7 @@ public:
         printf("offset:%llu, windowsNUm: %lld\n", offset, windowsNum);
     }
 
-    void getCompatWindows(string cw_files, vector<CW> &res_cws) {
+    void getCompatWindows(string cw_files, vector<CW> &res_cws) const{
         ifstream inFile(cw_files, ios::in | ios::binary); //二进制读方式打开
         if (!inFile) {
             cout << "error open file" << endl;

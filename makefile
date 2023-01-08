@@ -15,7 +15,7 @@ searchDuplicate: searchDuplicate.cc util/IO.hpp util/ds/indexItem.hpp util/ds/cw
 buildLargeNumWindows: buildLargeNumWindows.cc util/IO.hpp util/ds/indexItem.hpp util/ds/cw.hpp util/new_utils.hpp
 	${COMPILER} ${CPPFLAGS} -o $@ $<
 
-mergeCw: mergeCw.cc util/IO.hpp util/indexItem.hpp util/cw.hpp util/new_utils.hpp
+mergeCw: mergeCw.cc util/IO.hpp util/ds/indexItem.hpp util/ds/cw.hpp util/new_utils.hpp
 	${COMPILER} ${CPPFLAGS} -o $@ $<
 
 $(OBJ_DIR)/%.o: $(UTIL_DIR)/%.hpp

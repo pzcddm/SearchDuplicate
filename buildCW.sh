@@ -14,10 +14,34 @@
 # 	./buildCompatWindows -t 25 -k 4 >>exp1.txt
 # done
 
-for k in 1 2 4
+# for k in 1 2 4
+# do
+# for t in 25 50 100
+# do 
+# ./buildLargeNumWindows -k $k -t $t >> ./expRecord/buildExp/pile_${k}_${t}.txt
+# done
+# done
+
+# for k in 1 2 4
+# do
+# for t in 25 50 100
+# do 
+# ./mergeCw -k $k -t $t >> ./expRecord/buildExp/merged_pile_${k}_${t}.txt
+# done
+# done
+
+# for doc_limit in 26325966 52651932 105303864
+# do
+# for t in 25 50 100
+# do 
+# ./buildLargeNumWindows -k 1 -t $t -doc_limit $doc_limit >> ./expRecord/buildExp/pile_${t}_${doc_limit}.txt
+# done
+# done
+
+for doc_limit in 26325966 52651932 105303864
 do
 for t in 25 50 100
 do 
-./buildLargeNumWindows -k $k -t $t >> ./expRecord/buildExp/pile_${k}_${t}.txt
+./mergeCw -k 1 -t $t -doc_limit $doc_limit >> ./expRecord/buildExp/merged_pile_${t}_${doc_limit}.txt
 done
 done

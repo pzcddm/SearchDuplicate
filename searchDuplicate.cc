@@ -18,7 +18,7 @@
 using namespace std;
 
 // global variables
-DocIndex** docIndexArr;
+DocIndex **docIndexArr;
 BigIndexItem **indexArr;
 vector<SegmentTree> trees;
 ZoneMaps zonemaps;
@@ -53,7 +53,16 @@ int reportPassagesNum(const vector<CW> &duplicateCWs) {
 
 void display_parameters(const int &tokenNum, const int &k, const int &T, const float &theta, const int &zoneMpSize, const int &fixed_prefixe, const int &sample_sequence) {
     printf("tokenNum: %d ,k: %d , T:%d , theta:%f, zoneMpSize: %d fixed_prefix: %d total_sample_sequence %d \n", tokenNum, k, T, theta, zoneMpSize, fixed_prefixe, sample_sequence);
-} 
+}
+
+void delete_220_token(vector<int> &vec) {
+    for (auto it = vec.begin(); it != vec.end();) {
+        if ((*it) == 220)
+            it = vec.erase(it);
+        else
+            ++it;
+    }
+}
 
 int main(int argc, char **argv) {
     // Fixed parameters
@@ -63,33 +72,34 @@ int main(int argc, char **argv) {
     // string tokSeqFile = "../SelfGenerationText/gpt2-medium-540L_50TOPK_400000S.bin";
     // string tokSeqFile = "./openwebtext_sampled_docs.bin";
     string tokSeqFile = "../SelfGenerationText/gpt-neo-540L_50TOPK_1_3B.bin";
-    // string tokSeqFile = "./pile_sampled_docs.bin";
+    // string tokSeqFile = "./pile_sampled_docs.bin";   
+    string parent_dir = "./index";
 
     wordNum = 50257;
     docNum = 210607728; // the amount of texts in the dataset 210607728 8013769
     // int zoneMpSize = 8000; // the size of zonemaps under one hashfunction
-    int zoneMpSize = 50257;  //8000 50257
-    int T = 50;            // the T used in generating compact windows
-    int fixed_prefix = 64; // or 128
+    int zoneMpSize = 50257; // 8000 50257
+    int T = 50;             // the T used in generating compact windows
+    int fixed_prefix = 64;  // or 128
 
     bool if_showPassage = false;
-    int sample_sequence_num = 1000; 
+    int sample_sequence_num = 1000;
     int sample_start = 0;
     int max_windows_num = 10000;
     int max_k = 64;             // the maximum number of hash functions
     int k = 64;                 // the amount of hash functions intended to be used
     double prefix_length = 0.4; // control prefix length
-    float theta = 0.8;          // similarity threshold 
-    int prefilter_size = int(ceil(k * prefix_length)); 
+    float theta = 0.8;          // similarity threshold
+    int prefilter_size = int(ceil(k * prefix_length));
 
-    // load document index 
+    // load document index
 
     string doc_index_file = "./doc_index/openwebtext_gpt2_docIndex.bin";
     vector<unsigned long long> doc_index;
     readDocInex(doc_index, doc_index_file);
 
     // load parameters
-    for (int i = 0; i < argc; i++) { 
+    for (int i = 0; i < argc; i++) {
         string arg = argv[i];
         if (arg == "-dataset") {
             dataset = string(argv[i + 1]);
@@ -115,7 +125,7 @@ int main(int argc, char **argv) {
         if (arg == "-sample_sequence_num") {
             sample_sequence_num = atoi(argv[i + 1]);
         }
-        if (arg == "-k") { 
+        if (arg == "-k") {
             k = atoi(argv[i + 1]);
         }
         if (arg == "-prefix_length") {
@@ -124,13 +134,16 @@ int main(int argc, char **argv) {
         if (arg == "-theta") {
             theta = atof(argv[i + 1]);
         }
+        if (arg == "-sample_start"){
+            sample_start = atoi(argv[i + 1]);
+        }
     }
 
     cout << tokSeqFile << endl;
     display_parameters(wordNum, k, T, theta, zoneMpSize, fixed_prefix, sample_sequence_num);
     // get the data path
     string cw_dir, indexFile, zonemap_dir;
-    string root_dir = getRootDir(wordNum, max_k, T, docNum, zoneMpSize, dataset);
+    string root_dir = getRootDir(parent_dir,wordNum, max_k, T, docNum, zoneMpSize, dataset);
     getSonDir(root_dir, cw_dir, indexFile, zonemap_dir);
 
     // load the tokenized sequences
@@ -182,7 +195,7 @@ int main(int argc, char **argv) {
     int traversed_sequences_num = 0;
     for (int i = 0; i < sample_times; i++) {
         auto &raw_seq = tokenizedSeqs[randomNum[i + sample_start]];
-
+        delete_220_token(raw_seq);
         // make sure the sequence length is long enough
         if (raw_seq.size() < token_len_thres) {
             sample_times++;

@@ -26,100 +26,78 @@ extern ZoneMaps zonemaps;
 // extern vector<unordered_map<unsigned, int>> tokenId2index;
 // extern vector<vector<vector<pair<int, unsigned long long>>>> zoneMaps;
 extern vector<SegmentTree> trees;
+const int MAX_CWS_AMOUNT = 1e9;
 
 class Query {
-    vector<int> seqTokenized;
+private:
     float theta;        // threshold that is lower than 1
     int k;              // the num of hash functions that use
     string cws_dir;     // the directory path of cws
     int prefilter_size; // the size of smallest compat windows vectors loaded into prefilter
-private:
-    double IO_time = 0;
+    short min_collide_requirement;
 
+    vector<int> seqTokenized;
+    vector<int> minHashesToken; // save the tokenid that has minHashValue with each hashfunction (its length should be k)
+
+    double IO_time = 0;
+    bool if_success = true;
 public:
     Query() {
     }
 
     Query(const vector<int> &_seq, float _theta, int _k, string _cws_dir, int _prefilter_size) :
         seqTokenized(_seq), theta(_theta), k(_k), cws_dir(_cws_dir), prefilter_size(_prefilter_size) {
+        minHashesToken.resize(k);
+
         assert(theta <= 1.0);
+        min_collide_requirement = int(ceil(k * theta));
     }
 
     double getIOtime() {
         return IO_time;
     }
 
-    vector<CW> getResult(unsigned int &winNum, double &query_time) {    
+    vector<CW> getResult(unsigned int &winNum, double &query_time) {
         // Timer on
         auto timerOn = LogTime();
-
         vector<CW> res;
-        vector<int> minHashesToken(k);             // save the tokenid that has minHashValue with each hashfunction (its length should be k)
-        unordered_map<int, vector<CW>> doc_groups; // group CWs by their document id
 
         // get these K minHashes of the query sequence
-        getKMinHash(minHashesToken);
+        getKMinHash();
 
-        // Group those compat window vectors by T (document id)
-        vector<int> candidate_texts;
-        GroupT(doc_groups, minHashesToken, candidate_texts);
-        int filtered_groupNum = 0;
+        // sort the indexes by their windows number
+        vector<pair<BigIndexItem, int>> indexes = sortKIndexItems();
+
+        // find candidate texts
+        vector<pair<int, int>> candidate_texts;
+        unordered_map<int, vector<CW>> doc_groups; // group CWs by their document id
+        findCandTexts(indexes, doc_groups, candidate_texts);
+
         // Implement Find Subset algorithm to each group and filter those whose size is lower than ceil(theta*k)
-        int thres = int(ceil(k * theta));
+        findOnceNearDup(indexes, doc_groups, candidate_texts, res);
 
-        vector<unordered_map<int, vector<CW>>::iterator> its(doc_groups.size());
-        int cnt = 0;
-        for (auto it = doc_groups.begin(); it != doc_groups.end(); it++) {
-            its[cnt++] = it;
+        if(if_success== false){
+            printf("It occurs too much cws so it fails!\n");
+            return res;
         }
 
-        int flag = false;
-#pragma omp parallel for
-        for (const auto &candid_tid : candidate_texts) {
-            if (flag) { // need to be delted just to find if there is near duplicate
-                continue;
-            }
-            // filter each group's size
-            auto const &cw_vet = doc_groups[candid_tid];
-            if (cw_vet.size() < thres)
-                continue;
-            // else
-            //     cout << candid_tid <<" has cws :" <<cw_vet.size()<<endl;
-
-            // // output all the compact windows
-            // for (const auto &cw: cw_vet){
-            //     cw.display();
-            // }
-            filtered_groupNum++;
-            // Implement LineSweep Algorithm to find the intersection of intervals and get the result
-            vector<CW> tmp_res;
-            // nearDupSearch(cw_vet, thres, tmp_res, winNum);
-            int thread_id = omp_get_thread_num();
-            nearDupSearchFaster(cw_vet, thres, tmp_res, trees[thread_id]);
-
-#pragma omp critical
-            {
-                if (res.size())
-                    flag = true;
-                res.insert(res.end(), tmp_res.begin(), tmp_res.end());
-            }
-        }
-
-        // printf("Filtered Groups Amount: %d\n", filtered_groupNum);
         query_time = RepTime(timerOn);
         printf("This query operation costs %f seconds\n", query_time);
+        
         return res;
     }
 
 private:
-    void getKMinHash(vector<int> &minHashesToken) {
+    // Get the K minhash of the query sequence
+    void getKMinHash() {
 #pragma omp parallel for
         for (int i = 0; i < k; i++) {
+            // Calculate the hash values of the ith element sequence
             vector<int> hashValues(seqTokenized.size());
-
             for (int j = 0; j < seqTokenized.size(); j++) {
                 hashValues[j] = hval(hashFunctions, seqTokenized[j], i);
             }
+
             // Get minHash of current hashfunction
             int minValuePos = min_element(hashValues.begin(), hashValues.end()) - hashValues.begin();
             minHashesToken[i] = seqTokenized[minValuePos];
@@ -128,15 +106,7 @@ private:
         printf("------------------MinHashesToken Generated------------------\n");
     }
 
-    // Group those compat window vectors by T (document id)
-    void GroupT(unordered_map<int, vector<CW>> &groups, const vector<int> &minHashesToken, vector<int> &candidate_texts) {
-        auto timerOn = LogTime();
-        // load the coresponding cw vectors of these K minHashes
-        // and group them by document idw
-        int thres = int(ceil(k * theta));
-
-        assert(minHashesToken.size() == k);
-
+    vector<pair<BigIndexItem, int>> sortKIndexItems() {
         vector<pair<BigIndexItem, int>> indexes(k);
         for (int i = 0; i < minHashesToken.size(); i++) {
             int token_id = minHashesToken[i];
@@ -148,11 +118,22 @@ private:
         }
 
         sort(indexes.begin(), indexes.end());
-        vector<int> groups_tokens(docNum);
+
+        return indexes;
+    }
+
+    // find the candidate texts
+    void findCandTexts(const vector<pair<BigIndexItem, int>> &indexes, unordered_map<int, vector<CW>> &groups, vector<pair<int, int>> &candidate_texts) {
+        // load the coresponding cw vectors of these prefilter_size minHashes
+        // group them by document idw and then find candidate texts using dupSearch
+        auto timerOn = LogTime();
 
         double getCwsCost = 0;
         unsigned long long prefilter_cws_amount = 0;
-        int tmp_thres = prefilter_size - (k - thres);
+
+        int tmp_thres = prefilter_size - (k - min_collide_requirement);
+
+        vector<int> groups_tokens(docNum);
         for (int i = 0; i < prefilter_size; i++) {
             auto timerOn = LogTime();
             vector<CW> cw_vet;
@@ -162,6 +143,11 @@ private:
             getCwsCost += RepTime(timerOn);
             // cout << "cws length " << cw_vet.size() << endl;
 
+            if(prefilter_cws_amount > MAX_CWS_AMOUNT){
+                if_success = false;
+                return;
+            }
+            
             int pre_docId = -1;
             for (auto &cw : cw_vet) {
                 int doc_id = cw.T;
@@ -169,7 +155,8 @@ private:
                 if (groups_tokens[doc_id] + prefilter_size - i < tmp_thres)
                     continue;
 
-                groups[doc_id].emplace_back(cw);;
+                groups[doc_id].emplace_back(cw);
+                ;
 
                 if (pre_docId != doc_id) {
                     groups_tokens[doc_id]++;
@@ -198,8 +185,8 @@ private:
         for (auto const &it : its) {
             // filter each group's size
             int doc_id = it->first;
-            
-            assert(doc_id<docNum);
+
+            assert(doc_id < docNum);
             if (groups_tokens[doc_id] < tmp_thres)
                 continue;
             firstFileterNum++;
@@ -210,67 +197,111 @@ private:
 
             // nearDupSearch(it->second, tmp_thres, tmp_res, tmp_winNum);
             int thread_id = omp_get_thread_num();
-            nearDupSearchFaster(it->second, tmp_thres, tmp_res, trees[thread_id]);
+            auto collide_amount = nearDupSearchFaster(it->second, tmp_thres, tmp_res, trees[thread_id]);
 
 #pragma omp critical
             if (tmp_res.size() != 0) {
                 // cout<<"prefix filter: "<< groups_tokens[doc_id] <<endl;
                 // printf("Now Candidate text %d has %d cws\n",doc_id, groups[doc_id].size());
-                candidate_texts.emplace_back(doc_id);
+                candidate_texts.emplace_back(collide_amount, doc_id);
             }
         }
         // cout << "firstFileterNum" << firstFileterNum << endl;
+
+        // sort the candidate text pair so that the candidate texts with most collision will be ranked higher
+        sort(candidate_texts.rbegin(), candidate_texts.rend());
         printf("candidate_texts amount: %lu\n", candidate_texts.size());
 
         cout << "Prefilter cal candidate text Got Cost: " << RepTime(timerOn) << endl;
         timerOn = LogTime();
-        
+
         // // show out all the candidate texts
         // for (auto const & candidate : candidate_texts)
         //     cout << "one candidate text:" << candidate << endl;
-        
-        // iterate the left indexs and load those cws in candidates texts
-        for (int i = prefilter_size; i < k; i++) {
-            int ith_khash = indexes[i].second;
-            int token_id = minHashesToken[ith_khash];
-            string cws_file = cws_dir + to_string(ith_khash) + ".bin";
-            ifstream inFile(cws_file, ios::in | ios::binary); //二进制读方式打开
-            if (!inFile) {
-                cout << "error open file" << endl;
-                return;
-            }
-            for (auto const &candid_text : candidate_texts) {
-                // use zone map
-                auto timerOn = LogTime();
+    }
 
-                vector<CW> text_cws;
-                zonemaps.getCWinText(inFile, ith_khash, token_id, candid_text, text_cws);
+    // it will return if it find one nearDup
+    void findOnceNearDup(const vector<pair<BigIndexItem, int>> &indexes, unordered_map<int, vector<CW>> &doc_groups, const vector<pair<int, int>> &candidate_texts, vector<CW> & res) {
+        if(if_success== false)
+            return;
+
+        auto timerOn = LogTime();
+
+        // initialize infiles of those cws files
+        vector<ifstream> inFiles(k);
+        for (int i = prefilter_size; i < k; i++) {
+            const auto &ith_khash = indexes[i].second;
+            string cws_file = cws_dir + to_string(ith_khash) + ".bin";
+            inFiles[i].open(cws_file, ios::in | ios::binary); // open file in a binary way
+        }
+
+        // iterate each candidate text and load those cws in them, then test neapDuplicates
+        bool flag = false;
+
+// #pragma omp parallel for
+        for (auto const &candid_text : candidate_texts) {
+            // todo : use doc tokens to validate if amount of tokens can reach the min_collide_requirement
+            if(flag)
+                continue;
+            vector<CW> text_cws;
+            auto maxProbably_collide_amount = candid_text.first;
+
+            // use zone map to load the rest of compact windows
+            for (int i = prefilter_size; i < k; i++) {
+                auto timerOn = LogTime();
+                const auto &ith_khash = indexes[i].second;
+                const auto& token_id = minHashesToken[ith_khash];
+                zonemaps.getCWinText(inFiles[i], ith_khash, token_id, candid_text.second, text_cws);
                 if (text_cws.size() == 0) {
                     continue;
+                } else {
+                    maxProbably_collide_amount++;
                 }
-        
+
                 IO_time += RepTime(timerOn);
 
-                if(text_cws.size() >= 50000){
-                    cout<<ith_khash<<" "<<token_id<<" "<<candid_text<<endl;
-                    // for(auto const &cw: text_cws){
-                    //     assert(cw.T == candid_text);
-                    // }
+                if (text_cws.size() >= 50000) {
+                    cout << ith_khash << " " << token_id << " " << candid_text.second << endl;
                 }
-                // assert(text_cws.size() < 50000); // the amount of compact windows in one text of one token normally is  low (lower than 1e4)
-                // if(text_cws.size()>0){
-                //     cout<<"text_cws size"<<text_cws.size()<<endl;
-                // }
-                assert(groups.count(candid_text));
 
-                // put these compact windows into groups
-                for (auto const &cw : text_cws) {
-                    groups[candid_text].emplace_back(cw);
+                // Check if it is impossible to reach this requirement
+                if (maxProbably_collide_amount + (k - i) < min_collide_requirement) {
+                    break;
                 }
             }
+
+            if (maxProbably_collide_amount < min_collide_requirement) {
+                continue;
+            }
+
+            // put these compact windows into groups
+            for (auto const &cw : text_cws) {
+                doc_groups[candid_text.second].emplace_back(cw);
+            }
+
+            // check their collision
+            int thread_id = omp_get_thread_num();
+            vector<CW> tmp_res;
+            auto const &cw_vet = doc_groups[candid_text.second];
+            nearDupSearchFaster(cw_vet, min_collide_requirement, tmp_res, trees[thread_id]);
+
+            // if detect nearDuplicate
+// #pragma omp critical
+            {
+                if (res.size())
+                    flag = true;
+                res.insert(res.end(), tmp_res.begin(), tmp_res.end());
+            }
+        }
+
+        // close the ifstreams
+        for (auto &inFile : inFiles) {
             inFile.close();
         }
-        printf("This zonemap found part costs %f seconds\n", RepTime(timerOn));
-        printf("Groups Amount(Documents that minhashes corresponde): %lu\n", groups.size());
+
+        printf("This zonemap load part and nearDup Search costs %f seconds\n", RepTime(timerOn));
+        printf("Groups Amount(Documents that minhashes correspond): %lu\n", doc_groups.size());
+
+        return;
     }
 };

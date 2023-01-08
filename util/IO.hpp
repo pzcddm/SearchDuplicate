@@ -78,7 +78,7 @@ void loadIndexItem(IndexItem ** &indexArr, const int wordNum, const int &k, cons
 
     ifstream inFile(index_file, ios::in | ios::binary);
     if (!inFile) {
-        cout << "error open index file" << endl;
+        cout << "error open "<<index_file<<" index file" << endl;
         return;
     }
 

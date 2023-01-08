@@ -2,6 +2,7 @@
 
 #include "utils.hpp"
 #include <bits/stdc++.h>
+#include <dirent.h>
 
 template<class T> 
 vector<unsigned> sort_index(vector<T> arr){
@@ -220,3 +221,24 @@ void loadDocByInt(const string &filename, vector<int> &doc){
     copy(input_iterator, end, std::back_inserter(doc));
 }
 
+// cited from https://itecnote.com/tecnote/c-file-count-in-a-directory-using-c/
+// count the file numbers
+int getDirFileNum(string& dirPath)
+{
+  DIR *dp;
+  int i = 0;
+  struct dirent *ep;     
+  dp = opendir (dirPath.c_str());
+
+  if (dp != NULL)
+  {
+    while (ep = readdir (dp))
+      i++;
+
+    (void) closedir (dp);
+  }
+  else
+    perror ("Couldn't open the directory");
+
+  return i;
+}

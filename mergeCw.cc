@@ -1,13 +1,14 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-#include "util/cw.hpp"
-#include "util/indexItem.hpp"
-#include "util/bigIndexItem.hpp"
+#include "util/ds/cw.hpp"
+// #include "util/indexItem.hpp"
+#include "util/ds/bigIndexItem.hpp"
 #include "util/IO.hpp"
 #include "util/utils.hpp"
+#include "util/new_utils.hpp"
 
-#define DEBUG 1
+#define DEBUG 0
 
 const unsigned BUFFER_SIZE = 1e8;
 CW buffer[BUFFER_SIZE];
@@ -15,11 +16,11 @@ unsigned long long file_size_debug = 0;
 
 string getScatteredRootDir(const string &parent_dir, const int &tokenNum, const int &k, const int &T, const int &doc_lim, const int &zoneMpSize, const string &dataset_name) {
     char root_dir_path[50];
-    sprintf(root_dir_path, "%s/%s_%dK_%dk_%dT_%dM_%dZP_SCATTERED", parent_dir.c_str(), dataset_name.c_str(), tokenNum / 1000, k, T, doc_lim / 1000000, zoneMpSize);
+    sprintf(root_dir_path, "%s/%s_%dK_%dk_%dT_%dM_%dZP_SCATTERED/", parent_dir.c_str(), dataset_name.c_str(), tokenNum / 1000, k, T, doc_lim / 1000000, zoneMpSize);
     if (IsFileExist(root_dir_path)) {
         cout << "get the target root path" << endl;
     } else {
-        cout << "Error! Target Root Dir not exist" << endl;
+        cout << "Error! Scattered Target Root Dir not exist" << endl;
     }
 
     string str(root_dir_path);
@@ -27,11 +28,11 @@ string getScatteredRootDir(const string &parent_dir, const int &tokenNum, const 
     return str;
 }
 
-int main() {
+int main(int argc, char **argv) {
     // string scattered_dir = "./index/openwebtext_50K_64k_50T_8M_50257ZP_SCATTERED/";
     // string merged_dir = "./index/openwebtext_50K_64k_50T_8M_50257ZP_Merged/";
-    string scattered_dir = "./index/pile_50K_64k_50T_210M_50257ZP_SCATTERED/";
-    string merged_dir = "./index/pile_50K_64k_50T_210M_50257ZP/";
+    string scattered_dir;
+    string merged_dir;
 
     const string parent_dir = ".";
     const string dataset = "pile";
@@ -41,7 +42,7 @@ int main() {
     int INTERVAL_LIMIT = 50;          // set the interval limit for generating compat windows
     const int zonemp_interval = 5000; // the stride that decreasing when generating zonemap
     const int zoneMpSize = 50257;     // the size of zonemaps under one hashfunction
-    const int scattered_num = 101;
+    int scattered_num = 101;
 
     // parse arguments
     for (int i = 0; i < argc; i++) {
@@ -50,7 +51,7 @@ int main() {
             doc_limit = atoi(argv[i + 1]);
         }
         if (arg == "-k") {
-            k = atoi(argv[i + 1]);
+            K = atoi(argv[i + 1]);
         }
         if (arg == "-t") {
             INTERVAL_LIMIT = atoi(argv[i + 1]);
@@ -59,7 +60,7 @@ int main() {
 
     // get the path of two directories
     scattered_dir = getScatteredRootDir(parent_dir, tokenNum, K, INTERVAL_LIMIT, doc_limit, zoneMpSize, dataset);
-    merged_dir = getRootDir(parent_dir, tokenNum, K, INTERVAL_LIMIT, doc_limit, zoneMpSize, dataset);
+    merged_dir = createRootDir(parent_dir, tokenNum, K, INTERVAL_LIMIT, doc_limit, zoneMpSize, dataset);
 
     int pre_merge_pos = -1; // -1
     auto global_st = LogTime();
@@ -67,6 +68,11 @@ int main() {
     // get the scattered storage son dir
     string scattered_cws_dir, scattered_index_dir, scattered_zonemap_dir;
     getScatteredSonDir(scattered_dir, scattered_cws_dir, scattered_index_dir, scattered_zonemap_dir);
+
+    
+    scattered_num = getDirFileNum(scattered_index_dir);
+    scattered_num-=2;
+    printf("scattered_num: %d\n",scattered_num);
 
     // create the merged son dir
     mkdir(merged_dir.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
