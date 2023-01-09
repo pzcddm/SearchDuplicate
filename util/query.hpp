@@ -27,6 +27,7 @@ extern ZoneMaps zonemaps;
 // extern vector<vector<vector<pair<int, unsigned long long>>>> zoneMaps;
 extern vector<SegmentTree> trees;
 const int MAX_CWS_AMOUNT = 1e9;
+const double MAX_IO_TIME = 600;
 
 class Query {
 private:
@@ -77,7 +78,7 @@ public:
         findOnceNearDup(indexes, doc_groups, candidate_texts, res);
 
         if(if_success== false){
-            printf("It occurs too much cws so it fails!\n");
+            printf("It occurs too much cws so it fails! or the part of zonmap loading exceeds the time limit\n");
             return res;
         }
 
@@ -147,7 +148,7 @@ private:
                 if_success = false;
                 return;
             }
-            
+
             int pre_docId = -1;
             for (auto &cw : cw_vet) {
                 int doc_id = cw.T;
@@ -264,6 +265,11 @@ private:
                     cout << ith_khash << " " << token_id << " " << candid_text.second << endl;
                 }
 
+                if(IO_time>MAX_IO_TIME){
+                    if_success = false;
+                    printf("Too much IO Time (exceed time limit %f) \n", MAX_IO_TIME);
+                    return;
+                }
                 // Check if it is impossible to reach this requirement
                 if (maxProbably_collide_amount + (k - i) < min_collide_requirement) {
                     break;
