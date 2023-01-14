@@ -67,15 +67,6 @@ void display_parameters(const int &tokenNum, const int &k, const int &T, const i
     printf("tokenNum: %d ,k: %d , T:%d , zonemap_interval: %d, zoneMpSize: %d\n", tokenNum, k, T, zonemap_interval, zoneMpSize);
 }
 
-string createRootDir(const int &tokenNum, const int &k, const int &T, const int &doc_lim, const int &zoneMpSize, const string &dataset_name) {
-    char root_dir_path[50];
-    sprintf(root_dir_path, "%s_%dK_%dk_%dT_%dM_%dZP_SCATTERED", dataset_name.c_str(), tokenNum / 1000, k, T, doc_lim / 1000000, zoneMpSize);
-    mkdir(root_dir_path, S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
-
-    string str(root_dir_path);
-    return str;
-}
-
 // the directory for building large amount of compact windows is below:
 // /root_path/
 //  -/compatWindows/
@@ -87,9 +78,9 @@ string createRootDir(const int &tokenNum, const int &k, const int &T, const int 
 //  -/index/
 //  --index_0.bin...index_1.bin
 void createSonDir(const string &root_path, string &cw_dir, string &index_dir, string &zonemap_dir, int k) {
-    cw_dir = root_path + "/compatWindows/";
-    index_dir = root_path + "/index/";
-    zonemap_dir = root_path + "/zonemap/";
+    cw_dir = root_path + "compatWindows/";
+    index_dir = root_path + "index/";
+    zonemap_dir = root_path + "zonemap/";
 
     // create directory for cw dir and zonemap_dir
     mkdir(cw_dir.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
@@ -115,10 +106,11 @@ int main(int argc, char **argv) {
     // string dataset_name = "pile";
     // string src_file = "../dataset_tokenizedGbt2/openwebtext_gpt2.bin";
     string dataset_name = "pile";
+    string parent_dir ="./index";
     tokenNum = 50257;
     int doc_limit = 210607728;          // 8013769 210607728
     int epoch_docNum = doc_limit / 100; // the maximun number of documents that are iterated in a epoch
-    int k = 32;                         // the number of hash functions
+    int k = 64;                         // the number of hash functions
     INTERVAL_LIMIT = 50;                // set the interval limit for generating compat windows
     const int zonemp_interval = 5000;   // the stride that decreasing when generating zonemap
     const int zoneMpSize = 50257;        // the size of zonemaps under one hashfunction
@@ -134,13 +126,16 @@ int main(int argc, char **argv) {
         if (arg == "-t") {
             INTERVAL_LIMIT = atoi(argv[i + 1]);
         }
+        if (arg == "-parent_dir"){
+            parent_dir = string(argv[i + 1]);
+        }
     }
 
     // Storage location of results and create them
     string cw_dir;
     string index_dir;
     string zoneMap_dir;
-    string root_dir = createRootDir(tokenNum, k, INTERVAL_LIMIT, doc_limit, zoneMpSize, dataset_name);
+    string root_dir = createScatteredRootDir(parent_dir, tokenNum, k, INTERVAL_LIMIT, doc_limit, zoneMpSize, dataset_name);
     createSonDir(root_dir, cw_dir, index_dir, zoneMap_dir, k);
 
     // the hash functions' seeds are 1 to k (cannot use 0 and 1 both together because their hash functions are the same)
@@ -165,8 +160,10 @@ int main(int argc, char **argv) {
         int size;
         
         ifs.read((char *)&size, sizeof(int));
+
+        // We have checked that in the pile there are some texts whose size is so low and even 0
         if(size<=1){
-            cout<<"Low size: "<<size<<endl;
+            printf("Doc: %d is so small ",doc_cnt);
         }
 
         vector<int> vec(size);
@@ -185,9 +182,6 @@ int main(int argc, char **argv) {
             printf("------------------Partial Documents Loaded------------------\n");
             printf("Epoch: %d Current Doc_Cnt :%d \n", epochs, doc_cnt);
 
-            
-
-            
             // Index Item
             IndexItem **indexArr;
             indexArr = new IndexItem *[k];
@@ -206,7 +200,7 @@ int main(int argc, char **argv) {
                                                                                                 // Genrate Compat windows under the current hash function
 
                 int pre_doc_id = doc_cnt-docs.size();
-                printf("%d\n", docs.size());
+                printf("%ld\n", docs.size());
 
 #pragma omp parallel for
                 for (int doc_id = pre_doc_id; doc_id < doc_cnt; doc_id++) {

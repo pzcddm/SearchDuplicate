@@ -51,8 +51,8 @@ int reportPassagesNum(const vector<CW> &duplicateCWs) {
     return pasNum;
 }
 
-void display_parameters(const int &tokenNum, const int &k, const int &T, const float &theta, const int &zoneMpSize, const int &fixed_prefixe, const int &sample_sequence) {
-    printf("tokenNum: %d ,k: %d , T:%d , theta:%f, zoneMpSize: %d fixed_prefix: %d total_sample_sequence %d \n", tokenNum, k, T, theta, zoneMpSize, fixed_prefixe, sample_sequence);
+void display_parameters(const int &tokenNum, const int &k, const int &T, const float &theta, const int &zoneMpSize, const int &slideWin_lene, const int &sample_sequence) {
+    printf("tokenNum: %d ,k: %d , T:%d , theta:%f, zoneMpSize: %d slideWin_len: %d total_sample_sequence %d \n", tokenNum, k, T, theta, zoneMpSize, slideWin_lene, sample_sequence);
 }
 
 void delete_220_token(vector<int> &vec) {
@@ -80,7 +80,7 @@ int main(int argc, char **argv) {
     // int zoneMpSize = 8000; // the size of zonemaps under one hashfunction
     int zoneMpSize = 50257; // 8000 50257
     int T = 50;             // the T used in generating compact windows
-    int fixed_prefix = 64;  // or 128
+    int slideWin_len = 64;  // or 128
 
     bool if_showPassage = false;
     int sample_sequence_num = 1000;
@@ -103,9 +103,12 @@ int main(int argc, char **argv) {
         string arg = argv[i];
         if (arg == "-dataset") {
             dataset = string(argv[i + 1]);
+            if(dataset == "openwebtext"){
+                docNum = 8013769;
+            }
         }
-        if (arg == "-fixed_prefix") {
-            fixed_prefix = atoi(argv[i + 1]);
+        if (arg == "-slideWin_len") {
+            slideWin_len = atoi(argv[i + 1]);
         }
         if (arg == "-tokSeqFile") {
             tokSeqFile = string(argv[i + 1]);
@@ -127,6 +130,7 @@ int main(int argc, char **argv) {
         }
         if (arg == "-k") {
             k = atoi(argv[i + 1]);
+            max_k = k;
         }
         if (arg == "-prefix_length") {
             prefix_length = stod(string(argv[i + 1]));
@@ -140,7 +144,7 @@ int main(int argc, char **argv) {
     }
 
     cout << tokSeqFile << endl;
-    display_parameters(wordNum, k, T, theta, zoneMpSize, fixed_prefix, sample_sequence_num);
+    display_parameters(wordNum, k, T, theta, zoneMpSize, slideWin_len, sample_sequence_num);
     // get the data path
     string cw_dir, indexFile, zonemap_dir;
     string root_dir = getRootDir(parent_dir,wordNum, max_k, T, docNum, zoneMpSize, dataset);
@@ -189,7 +193,7 @@ int main(int argc, char **argv) {
     // Create query
     int sample_times = sample_sequence_num;
 
-    int token_len_thres = max(k, fixed_prefix);
+    int token_len_thres = max(k, slideWin_len);
 
     int windows_num = 0;
     int traversed_sequences_num = 0;
@@ -208,11 +212,11 @@ int main(int argc, char **argv) {
         cout << "current traversed sequences number: " << traversed_sequences_num << endl;
         cout << "windows current: " << windows_num << endl;
         traversed_sequences_num++;
-        for (int j = 0; j + fixed_prefix <= raw_seq.size(); j += fixed_prefix) {
+        for (int j = 0; j + slideWin_len <= raw_seq.size(); j += slideWin_len) {
             system("keep-job 48");
             windows_num++;
             vector<int> seq;
-            seq.assign(raw_seq.begin() + j, raw_seq.begin() + fixed_prefix + j);
+            seq.assign(raw_seq.begin() + j, raw_seq.begin() + slideWin_len + j);
             double query_time;
             unsigned int cwNum = 0;
             Query query(seq, theta, k, cw_dir, prefilter_size);
@@ -299,7 +303,7 @@ int main(int argc, char **argv) {
     cout << tokSeqFile << endl;
     cout << traversed_sequences_num << " Sequences Query Over" << endl;
     cout << "windows Num: " << windows_num << endl;
-    display_parameters(wordNum, k, T, theta, zoneMpSize, fixed_prefix, traversed_sequences_num);
+    display_parameters(wordNum, k, T, theta, zoneMpSize, slideWin_len, traversed_sequences_num);
     printf("total sequence num: %d total windows num: %d , near duplicate windows num %d\n", traversed_sequences_num, windows_num, find_num);
     printf(" memorized squences amount: %d  total_np_num: %d\n average query cost: %f average IO cost: %f, average caculation cost: %f", find_num, total_np_num, total_query_time / max_windows_num, total_IO_time / max_windows_num, (total_query_time - total_IO_time) / max_windows_num);
 }

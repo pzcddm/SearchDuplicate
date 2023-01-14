@@ -26,7 +26,7 @@ extern ZoneMaps zonemaps;
 // extern vector<unordered_map<unsigned, int>> tokenId2index;
 // extern vector<vector<vector<pair<int, unsigned long long>>>> zoneMaps;
 extern vector<SegmentTree> trees;
-const int MAX_CWS_AMOUNT = 1e9;
+const int MAX_CWS_AMOUNT = 8e8;
 const double MAX_IO_TIME = 600;
 
 class Query {
@@ -125,6 +125,7 @@ private:
 
     // find the candidate texts
     void findCandTexts(const vector<pair<BigIndexItem, int>> &indexes, unordered_map<int, vector<CW>> &groups, vector<pair<int, int>> &candidate_texts) {
+        printf("------------------Finding Candidate Texts------------------\n");
         // load the coresponding cw vectors of these prefilter_size minHashes
         // group them by document idw and then find candidate texts using dupSearch
         auto timerOn = LogTime();
@@ -142,6 +143,8 @@ private:
             indexes[i].first.getCompatWindows(cws_file, cw_vet);
             prefilter_cws_amount += cw_vet.size();
             getCwsCost += RepTime(timerOn);
+
+            // cout<<prefilter_cws_amount<<endl;
             // cout << "cws length " << cw_vet.size() << endl;
 
             if(prefilter_cws_amount > MAX_CWS_AMOUNT){
@@ -157,7 +160,7 @@ private:
                     continue;
 
                 groups[doc_id].emplace_back(cw);
-                ;
+                
 
                 if (pre_docId != doc_id) {
                     groups_tokens[doc_id]++;
@@ -223,6 +226,9 @@ private:
 
     // it will return if it find one nearDup
     void findOnceNearDup(const vector<pair<BigIndexItem, int>> &indexes, unordered_map<int, vector<CW>> &doc_groups, const vector<pair<int, int>> &candidate_texts, vector<CW> & res) {
+        if(candidate_texts.size() == 0)
+            return;
+        
         if(if_success== false)
             return;
 
@@ -238,12 +244,17 @@ private:
 
         // iterate each candidate text and load those cws in them, then test neapDuplicates
         bool flag = false;
+        auto max_preFilter_collide_amount = candidate_texts[0].first;
 
 // #pragma omp parallel for
         for (auto const &candid_text : candidate_texts) {
             // todo : use doc tokens to validate if amount of tokens can reach the min_collide_requirement
-            if(flag)
-                continue;
+
+            // if the flag is true and current candid_text.first is lower than max_preFilter_collide_amount
+            // that means there could not be completely duplicate
+            if(flag && candid_text.first<max_preFilter_collide_amount)
+                break;
+                
             vector<CW> text_cws;
             auto maxProbably_collide_amount = candid_text.first;
 
@@ -294,9 +305,10 @@ private:
             // if detect nearDuplicate
 // #pragma omp critical
             {
+                if(tmp_res.size())
+                    res.insert(res.end(), tmp_res.begin(), tmp_res.end());
                 if (res.size())
                     flag = true;
-                res.insert(res.end(), tmp_res.begin(), tmp_res.end());
             }
         }
 

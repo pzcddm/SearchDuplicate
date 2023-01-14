@@ -14,36 +14,23 @@ const unsigned BUFFER_SIZE = 1e8;
 CW buffer[BUFFER_SIZE];
 unsigned long long file_size_debug = 0;
 
-string getScatteredRootDir(const string &parent_dir, const int &tokenNum, const int &k, const int &T, const int &doc_lim, const int &zoneMpSize, const string &dataset_name) {
-    char root_dir_path[50];
-    sprintf(root_dir_path, "%s/%s_%dK_%dk_%dT_%dM_%dZP_SCATTERED/", parent_dir.c_str(), dataset_name.c_str(), tokenNum / 1000, k, T, doc_lim / 1000000, zoneMpSize);
-    if (IsFileExist(root_dir_path)) {
-        cout << "get the target root path" << endl;
-    } else {
-        cout << "Error! Scattered Target Root Dir not exist" << endl;
-    }
-
-    string str(root_dir_path);
-    cout << "Scattered Root Dir: " << str << endl;
-    return str;
-}
-
 int main(int argc, char **argv) {
     // string scattered_dir = "./index/openwebtext_50K_64k_50T_8M_50257ZP_SCATTERED/";
     // string merged_dir = "./index/openwebtext_50K_64k_50T_8M_50257ZP_Merged/";
     string scattered_dir;
     string merged_dir;
 
-    const string parent_dir = ".";
-    const string dataset = "pile";
+    const string parent_dir = "./index";
+    string dataset =  "pile"; // "pile";
     int tokenNum = 50257;
     int doc_limit = 210607728;        // 8013769 210607728
-    int K = 64;                       // the number of hash functions
-    int INTERVAL_LIMIT = 50;          // set the interval limit for generating compat windows
+    int K = 32;                       // the number of hash functions
+    int INTERVAL_LIMIT = 25;          // set the interval limit for generating compat windows
     const int zonemp_interval = 5000; // the stride that decreasing when generating zonemap
     const int zoneMpSize = 50257;     // the size of zonemaps under one hashfunction
     int scattered_num = 101;
 
+    
     // parse arguments
     for (int i = 0; i < argc; i++) {
         string arg = string(argv[i]);
@@ -57,11 +44,11 @@ int main(int argc, char **argv) {
             INTERVAL_LIMIT = atoi(argv[i + 1]);
         }
     }
-
+    
     // get the path of two directories
     scattered_dir = getScatteredRootDir(parent_dir, tokenNum, K, INTERVAL_LIMIT, doc_limit, zoneMpSize, dataset);
     merged_dir = createRootDir(parent_dir, tokenNum, K, INTERVAL_LIMIT, doc_limit, zoneMpSize, dataset);
-
+   
     int pre_merge_pos = -1; // -1
     auto global_st = LogTime();
 
@@ -69,10 +56,9 @@ int main(int argc, char **argv) {
     string scattered_cws_dir, scattered_index_dir, scattered_zonemap_dir;
     getScatteredSonDir(scattered_dir, scattered_cws_dir, scattered_index_dir, scattered_zonemap_dir);
 
-    
     scattered_num = getDirFileNum(scattered_index_dir);
-    scattered_num-=2;
-    printf("scattered_num: %d\n",scattered_num);
+    scattered_num -= 2;
+    printf("scattered_num: %d\n", scattered_num);
 
     // create the merged son dir
     mkdir(merged_dir.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);

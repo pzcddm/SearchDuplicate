@@ -165,7 +165,7 @@ int IsFileExist(const char *path) {
 
 // get the create
 string getRootDir(const string & parent_dir, const int &tokenNum, const int &k, const int &T, const int &doc_lim, const int &zoneMpSize, const string &dataset_name) {
-    char root_dir_path[50];
+    char root_dir_path[100];
     sprintf(root_dir_path, "%s/%s_%dK_%dk_%dT_%dM_%dZP",parent_dir.c_str(), dataset_name.c_str(), tokenNum / 1000, k, T, doc_lim / 1000000, zoneMpSize);
     if (IsFileExist(root_dir_path)) {
         cout << "get the target root path" << endl;
@@ -179,7 +179,7 @@ string getRootDir(const string & parent_dir, const int &tokenNum, const int &k, 
 }
 
 string createRootDir(const string & parent_dir, const int &tokenNum, const int &k, const int &T, const int & doc_lim,  const int &zoneMpSize, const string & dataset_name){
-    char root_dir_path[50];
+    char root_dir_path[100];
     sprintf(root_dir_path,"%s/%s_%dK_%dk_%dT_%dM_%dZP",parent_dir.c_str(),dataset_name.c_str(),tokenNum/1000,k,T,doc_lim/1000000, zoneMpSize);
     if(!IsFileExist(root_dir_path)){
         mkdir(root_dir_path,S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
@@ -217,6 +217,36 @@ void createSonDir(const string& root_path, string & cw_dir, string & index_file,
         mkdir(zonemap_dir.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
         printf("%s Directory Made\n", zonemap_dir.c_str());
     }
+}
+
+string createScatteredRootDir(const string &parent_dir, const int &tokenNum, const int &k, const int &T, const int &doc_lim, const int &zoneMpSize, const string &dataset_name) {
+    char root_dir_path[100];
+    sprintf(root_dir_path, "%s/%s_%dK_%dk_%dT_%dM_%dZP_SCATTERED/", parent_dir.c_str(), dataset_name.c_str(), tokenNum / 1000, k, T, doc_lim / 1000000, zoneMpSize);
+    cout<<root_dir_path<<endl;
+    if (IsFileExist(root_dir_path)) {
+        cout << "get the target root path" << endl;
+    } else {
+        mkdir(root_dir_path,S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
+        printf("%s Directory Made\n", root_dir_path);
+    }
+
+    string str(root_dir_path);
+    cout << "Scattered Root Dir: " << str << endl;
+    return str;
+}
+
+string getScatteredRootDir(const string &parent_dir, const int &tokenNum, const int &k, const int &T, const int &doc_lim, const int &zoneMpSize, const string &dataset_name) {
+    char root_dir_path[100];
+    sprintf(root_dir_path, "%s/%s_%dK_%dk_%dT_%dM_%dZP_SCATTERED/", parent_dir.c_str(), dataset_name.c_str(), tokenNum / 1000, k, T, doc_lim / 1000000, zoneMpSize);
+    if (IsFileExist(root_dir_path)) {
+        cout << "get the target root path" << endl;
+    } else {
+        cout << "Error! Scattered Target Root Dir not exist" << endl;
+    }
+
+    string str(root_dir_path);
+    cout << "Scattered Root Dir: " << str << endl;
+    return str;
 }
 
 void getScatteredSonDir(const string &scattered_dir, string &cw_dir, string &index_dir, string &zonemap_dir) {
