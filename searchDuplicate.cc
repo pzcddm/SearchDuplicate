@@ -4,14 +4,15 @@
 #include <iostream>
 #include <map>
 
-// #include "util/nearDupSearch.hpp"
 #include "util/ds/cw.hpp"
 #include "util/ds/docIndex.hpp"
-#include "util/IO.hpp"
+#include "util/ds/bigIndexItem.hpp"
 
+#include "util/IO.hpp"
 #include "util/utils.hpp"
 #include "util/new_utils.hpp"
-#include "util/ds/bigIndexItem.hpp"
+
+#include "util/config/searchConfig.hpp"
 #include "util/query.hpp"
 // #include "util/queryFaster.hpp"
 #include "util/dupSearch/segmentTree.hpp"
@@ -51,10 +52,6 @@ int reportPassagesNum(const vector<CW> &duplicateCWs) {
     return pasNum;
 }
 
-void display_parameters(const int &tokenNum, const int &k, const int &T, const float &theta, const int &zoneMpSize, const int &slideWin_lene, const int &sample_sequence) {
-    printf("tokenNum: %d ,k: %d , T:%d , theta:%f, zoneMpSize: %d slideWin_len: %d total_sample_sequence %d \n", tokenNum, k, T, theta, zoneMpSize, slideWin_lene, sample_sequence);
-}
-
 void delete_220_token(vector<int> &vec) {
     for (auto it = vec.begin(); it != vec.end();) {
         if ((*it) == 220)
@@ -65,174 +62,90 @@ void delete_220_token(vector<int> &vec) {
 }
 
 int main(int argc, char **argv) {
-    // Fixed parameters
+    // Default parameters for config
     string source_bin_file = "../dataset_tokenizedGbt2/openwebtext_gpt2.bin";
-    string dataset = "pile";
-    // string dataset = "openwebtext";
-    // string tokSeqFile = "../SelfGenerationText/gpt2-medium-540L_50TOPK_400000S.bin";
-    // string tokSeqFile = "./openwebtext_sampled_docs.bin";
-    string tokSeqFile = "../SelfGenerationText/gpt-neo-540L_50TOPK_1_3B.bin";
-    // string tokSeqFile = "./pile_sampled_docs.bin";   
+    string dataset = "pile";                                                  // string dataset = "openwebtext";
+    int max_k = 64;                                                           // the maximum number of hash functions
+    int T = 50;                                                               // the T used in generating compact windows
+    string tokSeqFile = "../SelfGenerationText/gpt-neo-540L_50TOPK_1_3B.bin"; // "../SelfGenerationText/gpt2-medium-540L_50TOPK_400000S.bin"  "./pile_sampled_docs.bin"
     string parent_dir = "./index";
+    bool if_attachDocIndex = false;
 
-    wordNum = 50257;
-    docNum = 210607728; // the amount of texts in the dataset 210607728 8013769
-    // int zoneMpSize = 8000; // the size of zonemaps under one hashfunction
-    int zoneMpSize = 50257; // 8000 50257
-    int T = 50;             // the T used in generating compact windows
-    int slideWin_len = 64;  // or 128
-
-    bool if_showPassage = false;
+    // Default parameters for searching
+    int slideWin_len = 64; // or 128 or 32
     int sample_sequence_num = 1000;
     int sample_start = 0;
-    int max_windows_num = 10000;
-    int max_k = 64;             // the maximum number of hash functions
-    int k = 64;                 // the amount of hash functions intended to be used
-    double prefix_length = 0.4; // control prefix length
-    float theta = 0.8;          // similarity threshold
-    int prefilter_size = int(ceil(k * prefix_length));
+    bool if_showPassage = false;
+    double prefix_ratio = 0.4; // control prefix length
+    float theta = 0.8;         // similarity threshold
+
+    SearchConfig config(max_k, T, dataset, if_attachDocIndex, tokSeqFile);
+    config.setQueryConfig(slideWin_len, sample_sequence_num, sample_start, prefix_ratio, theta);
+
+    // parse the arguments
+    config.parseArgv(argc, argv);
+
+    wordNum = config.token_num;
+    docNum = config.doc_limit; // the amount of texts in the dataset 210607728 8013769
 
     // load document index
-
     string doc_index_file = "./doc_index/openwebtext_gpt2_docIndex.bin";
     vector<unsigned long long> doc_index;
     readDocInex(doc_index, doc_index_file);
 
-    // load parameters
-    for (int i = 0; i < argc; i++) {
-        string arg = argv[i];
-        if (arg == "-dataset") {
-            dataset = string(argv[i + 1]);
-            if(dataset == "openwebtext"){
-                docNum = 8013769;
-            }
-        }
-        if (arg == "-slideWin_len") {
-            slideWin_len = atoi(argv[i + 1]);
-        }
-        if (arg == "-tokSeqFile") {
-            tokSeqFile = string(argv[i + 1]);
-        }
-        if (arg == "-wordNum") {
-            wordNum = atoi(argv[i + 1]);
-        }
-        if (arg == "-docNum") {
-            docNum = atoi(argv[i + 1]);
-        }
-        if (arg == "-zoneMpSize") {
-            zoneMpSize = atoi(argv[i + 1]);
-        }
-        if (arg == "-T") {
-            T = atoi(argv[i + 1]);
-        }
-        if (arg == "-sample_sequence_num") {
-            sample_sequence_num = atoi(argv[i + 1]);
-        }
-        if (arg == "-k") {
-            k = atoi(argv[i + 1]);
-            max_k = k;
-        }
-        if (arg == "-prefix_length") {
-            prefix_length = stod(string(argv[i + 1]));
-        }
-        if (arg == "-theta") {
-            theta = atof(argv[i + 1]);
-        }
-        if (arg == "-sample_start"){
-            sample_start = atoi(argv[i + 1]);
-        }
-    }
+    // show current parameters of config
+    config.display_parameters();
 
-    cout << tokSeqFile << endl;
-    display_parameters(wordNum, k, T, theta, zoneMpSize, slideWin_len, sample_sequence_num);
     // get the data path
-    string cw_dir, indexFile, zonemap_dir;
-    string root_dir = getRootDir(parent_dir,wordNum, max_k, T, docNum, zoneMpSize, dataset);
-    getSonDir(root_dir, cw_dir, indexFile, zonemap_dir);
+    config.getFileDirPath(parent_dir);
 
     // load the tokenized sequences
     vector<vector<int>> tokenizedSeqs;
-    loadBin(tokSeqFile, tokenizedSeqs);
+    config.loadTokenziedSeqs(tokenizedSeqs);
 
-    prepareGlobalVariables(max_k);
+    prepareGlobalVariables(config.max_k);
 
     // Initialize and load zone map
-    zonemaps = ZoneMaps(max_k, zoneMpSize);
-    zonemaps.load(zonemap_dir);
-    // loadZoneMap(max_k, zonemap_dir);
+    zonemaps = ZoneMaps(config.max_k, config.zoneMpSize);
+    zonemaps.load(config.zoneMap_dirPath);
 
     // load the IndexItem
-    loadBigIndexItem(indexArr, wordNum, max_k, indexFile);
+    loadBigIndexItem(indexArr, wordNum, config.max_k, config.index_filePath);
 
     // load the docIndex
-    string docIndex_file_path = "./index/pile_50K_64k_50T_210M_50257ZP/docIndex.bin";
-    loadDocIndex(docIndexArr, wordNum, max_k, docIndex_file_path);
-
-    string t_dir_path = "./index/pile_50K_64k_50T_210M_50257ZP/t/";
-    string docOfs_dir_path = "./index/pile_50K_64k_50T_210M_50257ZP/docOfs/";
-
-    cout << "first tokenized seq Num" << tokenizedSeqs[0].size() << endl;
-
-    // create random shuffle array to random sample the tokenizeSeq
-    int *randomNum = new int[tokenizedSeqs.size()];
-    for (int i = 0; i < tokenizedSeqs.size(); i++) {
-        randomNum[i] = i;
+    if (if_attachDocIndex) {
+        loadDocIndex(docIndexArr, wordNum, config.max_k, config.docIndex_filePath);
     }
 
-    int find_num = 0;     // the num of those sequences have near dup
-    int total_np_num = 0; // the num of finding np
-    vector<int> find_np_arr;
-    double total_query_time = 0;
-    double total_IO_time = 0;
     map<int, int> mp;
-    map<double, int> theta_mp;
-    theta_mp[0.8] = 0;
-    theta_mp[0.9] = 0;
-    theta_mp[1.0] = 0;
 
-    // Create query
-    int sample_times = sample_sequence_num;
-
-    int token_len_thres = max(k, slideWin_len);
-
-    int windows_num = 0;
-    int traversed_sequences_num = 0;
-    for (int i = 0; i < sample_times; i++) {
-        auto &raw_seq = tokenizedSeqs[randomNum[i + sample_start]];
+    for (int i = 0; i < config.sample_texts_num; i++) {
+        auto &raw_seq = tokenizedSeqs[i + sample_start];
         delete_220_token(raw_seq);
         // make sure the sequence length is long enough
-        if (raw_seq.size() < token_len_thres) {
-            sample_times++;
+        if (raw_seq.size() < config.slideWin_len) {
             cout << "Meet short seq, skip " << endl;
             continue;
         }
+
         cout << "New Sequence length: " << raw_seq.size() << endl;
-        // Intercept prefix
-        cout << "current sequences no: " << i + sample_start << endl;
-        cout << "current traversed sequences number: " << traversed_sequences_num << endl;
-        cout << "windows current: " << windows_num << endl;
-        traversed_sequences_num++;
+        config.display_curInfo();
+        config.current_textNo++;
+
         for (int j = 0; j + slideWin_len <= raw_seq.size(); j += slideWin_len) {
             system("keep-job 48");
-            windows_num++;
+            config.total_query_amount++;
             vector<int> seq;
             seq.assign(raw_seq.begin() + j, raw_seq.begin() + slideWin_len + j);
             double query_time;
             unsigned int cwNum = 0;
-            Query query(seq, theta, k, cw_dir, prefilter_size);
+            Query query(seq, config.theta, config.using_k, config.cw_dirPath, config.prefix_ratio);
             // QueryFaster query(seq, theta, k, cw_dir, prefilter_size, t_dir_path, docOfs_dir_path);
             // Search near duplicate sentence
             vector<CW> duplicateCWs = query.getResult(cwNum, query_time);
-            total_IO_time += query.getIOtime();
-
-            bool flags[3] = {false, false, false};
-            for (auto const &cw : duplicateCWs) {
-                double tmp_theta = int(cw.c * 1.0 / k * 10.0) / 10.0;
-                assert(tmp_theta >= 0.8);
-                if (flags[int(ceil((tmp_theta - 0.8) * 10))] == false) {
-                    flags[int(ceil((tmp_theta - 0.8) * 10))] = true;
-                }
-            }
+            config.total_IO_time += query.getIOtime();
+            config.exactDiffSim(duplicateCWs);
+            config.total_query_time += query_time;
 
             // output the duplicate passage
             if (if_showPassage && duplicateCWs.size()) {
@@ -252,58 +165,26 @@ int main(int argc, char **argv) {
                 printVec(dup_passage);
             }
 
-            if (flags[2] == true) {
-                flags[1] = true;
-                flags[0] = true;
-            }
-
-            if (flags[1] == true) {
-                flags[0] = true;
-            }
-            theta_mp[0.8] += flags[0];
-            theta_mp[0.9] += flags[1];
-            theta_mp[1.0] += flags[2];
-
             // Extract differtent theta from different
             int np_passagesNum = reportPassagesNum(duplicateCWs);
             if (np_passagesNum > 0) {
-                find_num++;
+                config.found_num++;
 
                 if (if_showPassage) {
                     cout << "Show the query seq:\n";
                     printVec(seq);
-                    printf("found a near duplicate window current near duplicate:%d\n ", find_num);
                 }
 
                 mp[np_passagesNum]++;
-                total_np_num += np_passagesNum;
-                find_np_arr.emplace_back(np_passagesNum);
-
-                for (auto const &it : theta_mp) {
-                    printf("theta:%f passage_num:%d\n", it.first, it.second);
-                }
+                config.total_np_num += np_passagesNum;
+                config.display_diffSimMp();
             }
-            total_query_time += query_time;
-
-            if (windows_num >= max_windows_num)
-                break;
         }
-        if (windows_num >= max_windows_num)
-            break;
     }
 
     for (auto const &it : mp) {
         printf("np: %d value: %d\n", it.first, it.second);
     }
 
-    for (auto const &it : theta_mp) {
-        printf("theta:%f passage_num:%d\n", it.first, it.second);
-    }
-
-    cout << tokSeqFile << endl;
-    cout << traversed_sequences_num << " Sequences Query Over" << endl;
-    cout << "windows Num: " << windows_num << endl;
-    display_parameters(wordNum, k, T, theta, zoneMpSize, slideWin_len, traversed_sequences_num);
-    printf("total sequence num: %d total windows num: %d , near duplicate windows num %d\n", traversed_sequences_num, windows_num, find_num);
-    printf(" memorized squences amount: %d  total_np_num: %d\n average query cost: %f average IO cost: %f, average caculation cost: %f", find_num, total_np_num, total_query_time / max_windows_num, total_IO_time / max_windows_num, (total_query_time - total_IO_time) / max_windows_num);
+    config.show_result();
 }

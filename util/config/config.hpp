@@ -32,6 +32,8 @@ public:
     string t_dirPath;         // the directory path of the recorded cw amounts of corresponding text(document)
     string docOfs_dirPath;    // the directory path of offset of each document in the cw_file
 
+    Config(){}
+
     Config(string _dataset_name, bool _if_attachDocIndex) :
         dataset_name(_dataset_name), if_attachDocIndex(_if_attachDocIndex) {
         if (_dataset_name == "pile")

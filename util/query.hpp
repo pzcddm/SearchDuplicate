@@ -46,8 +46,8 @@ public:
     Query() {
     }
 
-    Query(const vector<int> &_seq, float _theta, int _k, string _cws_dir, int _prefilter_size) :
-        seqTokenized(_seq), theta(_theta), k(_k), cws_dir(_cws_dir), prefilter_size(_prefilter_size) {
+    Query(const vector<int> &_seq, float _theta, int _k, string _cws_dir, double _prefilter_ratio) :
+        seqTokenized(_seq), theta(_theta), k(_k), cws_dir(_cws_dir), prefilter_size(int(ceil(k*_prefilter_ratio))) {
         minHashesToken.resize(k);
 
         assert(theta <= 1.0);
@@ -144,7 +144,7 @@ private:
             prefilter_cws_amount += cw_vet.size();
             getCwsCost += RepTime(timerOn);
 
-            // cout<<prefilter_cws_amount<<endl;
+            cout<<prefilter_cws_amount<<endl;
             // cout << "cws length " << cw_vet.size() << endl;
 
             if(prefilter_cws_amount > MAX_CWS_AMOUNT){
