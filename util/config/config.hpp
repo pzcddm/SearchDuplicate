@@ -1,3 +1,4 @@
+#pragma once
 #include "../IO.hpp"
 #include <iostream>
 #include <cstdio>
@@ -40,6 +41,8 @@ public:
             config_dataset(_dataset_name, 210607728);
         else if (_dataset_name == "openwebtext")
             config_dataset(_dataset_name, 8013769);
+        else if (_dataset_name == "c4")
+            config_dataset(_dataset_name, 364868892);
         else
             perror("No given dataset\n");
     }
@@ -50,6 +53,8 @@ public:
             config_dataset(_dataset_name, 210607728);
         else if (_dataset_name == "openwebtext")
             config_dataset(_dataset_name, 8013769);
+        else if (_dataset_name == "c4")
+            config_dataset(_dataset_name, 364868892);
         else
             perror("No given dataset\n");
     }
@@ -108,5 +113,6 @@ public:
         printf("---------Displaying The Parameters Of Config-----------\n");
         printf("dataset: %s\n", dataset_name.c_str());
         printf("tokenNum: %d ,k: %d , T:%d , zonemap_interval: %d, zoneMpSize: %d\n", token_num, k, interval_limit, zonemp_interval, zoneMpSize);
+        printf("All the file location: %s %s %s\n", zoneMap_dirPath.c_str(), index_filePath.c_str(), cw_dirPath.c_str());
     }
 };

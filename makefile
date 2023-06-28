@@ -6,6 +6,8 @@ SRC_FILES := $(wildcard $(UTIL_DIR)/*.hpp)
 CPPFLAGS = -O3 -fopenmp -std=c++17
 all: $(METHOD)
 
+build: build.cc util/IO.hpp util/ds/indexItem.hpp util/ds/cw.hpp util/new_utils.hpp util/builder/builder.hpp util/config/buildConfig.hpp
+	${COMPILER} ${CPPFLAGS} -o $@ $<
 buildCompatWindows: buildCompatWindows.cc util/IO.hpp util/ds/indexItem.hpp util/ds/cw.hpp util/new_utils.hpp
 	${COMPILER} ${CPPFLAGS} -o $@ $<
 

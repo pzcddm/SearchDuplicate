@@ -17,3 +17,4 @@ searchDuplicate
 test*
 .nfs*
 pile_*
+.vscode

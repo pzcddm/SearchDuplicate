@@ -41,9 +41,15 @@ double RepTime(const std::chrono::_V2::system_clock::time_point &start) {
 }
 
 // The hash value function
-inline int hval(const vector<pair<int, int>> &hf, int word, int kth_hash = 0) {
-    return hf[kth_hash].first * word + hf[kth_hash].second;
+inline int hval(const vector<pair<int, int>> &hfs, int word, int kth_hash = 0) {
+    return hfs[kth_hash].first * word + hfs[kth_hash].second;
 }
+
+// The hash value function
+inline int hval(const pair<int, int> &hf, int word) {
+    return hf.first * word + hf.second;
+}
+
 // printInfo of 2-dim vector
 void printInfo(vector<vector<int>> vs) {
     for (auto &item : vs) {
