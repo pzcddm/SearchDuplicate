@@ -11,17 +11,17 @@
 #include "cwGenerator.hpp"
 using namespace std;
 
-class IndexBuilder{
+class IndexBuilder {
 public:
     BuildConfig config;
-    vector<pair<int, int>> hf; //hash functions
-    IndexItem **indexArr; // Index Item
-    vector<vector<int>> docs; // the content of documents
-    vector<vector<CW>> res_cws;     // generated compact windows
-    double writingDiskCost = 0;     // time cost of writing files
+    vector<pair<int, int>> hf;  // hash functions
+    IndexItem **indexArr;       // Index Item
+    vector<vector<int>> docs;   // the content of documents
+    vector<vector<CW>> res_cws; // generated compact windows
+    double writingDiskCost = 0; // time cost of writing files
 
 private:
-    void build_index_zonemap(const int ith_hash){
+    void build_index_zonemap(const int ith_hash) {
         // Get the longest cws and their corresponding token_id
         vector<unsigned> cws_len(config.token_num);
         for (int j = 0; j < config.token_num; j++) {
@@ -29,8 +29,8 @@ private:
         }
         vector<unsigned> sorted_index = sort_index(cws_len);
         vector<unsigned> longest_cws_tid(config.zoneMpSize);
-        int longestcws_cnt =0;
-        for (int i = config.token_num - config.zoneMpSize ; i < config.token_num; i++) {
+        int longestcws_cnt = 0;
+        for (int i = config.token_num - config.zoneMpSize; i < config.token_num; i++) {
             longest_cws_tid[longestcws_cnt++] = sorted_index[i];
         }
         sort(longest_cws_tid.begin(), longest_cws_tid.end()); // let this token id ordered
@@ -38,7 +38,7 @@ private:
         int zonemp_cnt = 0;
 
         // write these cws into a file
-        string save_path = config.cw_dirPath + to_string(ith_hash)  + ".bin";
+        string save_path = config.cw_dirPath + to_string(ith_hash) + ".bin";
         ofstream outFile(save_path.c_str(), ios::out | ios::binary);
 
         unsigned long long offset = 0;
@@ -74,8 +74,8 @@ private:
 
         // writing zonemap
         string zonemap_path = config.zoneMap_dirPath + to_string(ith_hash) + ".bin";
-        
-        cout<<"Zone map writing"<<zonemap_path<<endl;
+
+        cout << "Zone map writing" << zonemap_path << endl;
         ofstream zpFile(zonemap_path.c_str(), ios::out | ios::binary);
 
         for (int j = 0; j < longest_cws_tid.size(); j++) {
@@ -93,11 +93,11 @@ private:
         zpFile.close();
     }
 
-    void write_index(){
+    void write_index() {
         printf("------------------Writing Index File------------------\n");
 
         ofstream outFile(config.index_filePath, ios::out | ios::binary);
-        for (int i = 0; i <  config.k; i++) {
+        for (int i = 0; i < config.k; i++) {
             for (int j = 0; j < config.token_num; j++) {
                 outFile.write((char *)&indexArr[i][j], sizeof(IndexItem));
             }
@@ -107,34 +107,33 @@ private:
     }
 
 public:
-
     // build the index
-    void build(){
-        auto start =LogTime();
+    void build() {
+        auto start = LogTime();
 
         // generate compat windows for every document for every hash function
         printf("------------------Generating Compat Windows------------------\n");
         unsigned long long total_cws_amount = 0;
         const int thread_num = omp_get_max_threads();
-        vector<CwGenerator> generators(thread_num,CwGenerator(config.interval_limit));
+        vector<CwGenerator> generators(thread_num, CwGenerator(config.interval_limit));
         for (int i = 0; i < config.k; i++) {
-            for(auto & generator: generators) generator.set_hf(hf[i]);
-            
+            for (auto &generator : generators) generator.set_hf(hf[i]);
+
             // Three-dimensional(threads, tokens, compatwindows) arrays
-            vector<vector<vector<CW>>> tmp_vetor(thread_num, vector<vector<CW>>(config.token_num)); 
-#pragma omp parallel for  // Genrate Compat windows under the current hash function
+            vector<vector<vector<CW>>> tmp_vetor(thread_num, vector<vector<CW>>(config.token_num));
+#pragma omp parallel for // Genrate Compat windows under the current hash function
             for (int doc_id = 0; doc_id < config.doc_limit; doc_id++) {
                 int tid = omp_get_thread_num();
                 generators[tid].generate(doc_id, docs[doc_id], tmp_vetor[tid]);
             }
 
-             // Merge inverted list generated from different threads and sort it
+            // Merge inverted list generated from different threads and sort it
             res_cws.clear();
             res_cws.resize(config.token_num);
 #pragma omp parallel for reduction(+ \
                                    : total_cws_amount)
             for (int j = 0; j < config.token_num; j++) {
-                for ( int tid = 0; tid < thread_num; tid++) {
+                for (int tid = 0; tid < thread_num; tid++) {
                     res_cws[j].insert(res_cws[j].end(), tmp_vetor[tid][j].begin(), tmp_vetor[tid][j].end());
                     vector<CW>().swap(tmp_vetor[tid][j]);
                     // tmp_vetor[tid][j].clear();
@@ -144,7 +143,7 @@ public:
                 total_cws_amount += res_cws[j].size();
             }
 
-             // build index and zonemap (also write the zonemap)
+            // build index and zonemap (also write the zonemap)
             auto writingDiskTimer = LogTime();
             build_index_zonemap(i);
             writingDiskCost += RepTime(writingDiskTimer);
@@ -158,17 +157,17 @@ public:
         printf("------------------Compat Windows Generated------------------\n");
         cout << "Compat Windows Generation, Sorting, and Saving Time Cost: " << total_time_cost << " Seconds\n"; // this time cost doesn't not include the time cost of loading bin files
         cout << "Disk Writing Time Cost: " << writingDiskCost << " Seconds\n";
-        printf("Averaging over k disk IO time: %f  Computing time: %f compact windows amount: %f\n", 
-            writingDiskCost/config.k, (total_time_cost-writingDiskCost)/config.k, total_cws_amount*1.0/config.k);
-
+        printf("Averaging over k disk IO time: %f  Computing time: %f compact windows amount: %f\n",
+               writingDiskCost / config.k, (total_time_cost - writingDiskCost) / config.k, total_cws_amount * 1.0 / config.k);
     }
 
-    IndexBuilder(){}
+    IndexBuilder() {
+    }
 
-    IndexBuilder(BuildConfig _config){
+    IndexBuilder(BuildConfig _config) {
         config = _config;
-        
-        //the hash functions' seeds are 1 to k (cannot use 0 and 1 both together because their hash functions are the same)
+
+        // the hash functions' seeds are 1 to k (cannot use 0 and 1 both together because their hash functions are the same)
         for (auto seed = 1; seed <= config.k; seed++) generateHashFunc(seed, hf);
 
         // Allocate the memory for the index array
@@ -180,17 +179,16 @@ public:
         // Load the dataset/texts
         auto start = LogTime();
         printf("------------------Loading Document File------------------\n");
-        loadBin(config.src_file,docs);
+        loadBin(config.src_file, docs);
         cout << "readfile time: " << RepTime(start) << " seconds" << endl;
         assert(config.doc_limit == docs.size());
         printf("------------------Document File Loaded------------------\n");
-
     }
 
-    ~IndexBuilder(){
+    ~IndexBuilder() {
         for (int i = 0; i < config.k; i++) {
-            delete [] indexArr[i];
+            delete[] indexArr[i];
         }
-        delete [] indexArr;
+        delete[] indexArr;
     }
 };

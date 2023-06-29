@@ -125,6 +125,22 @@ void loadBin(const string &binFileName, vector<vector<int>> &docs) {
     ifs.close();
 }
 
+// load the vector<int> of a bin file and push back to docs
+void loadBin(const string &binFileName, vector<int> &vec) {
+    ifstream ifs(binFileName, ios::binary);
+    if (!ifs) {
+        cout << "error open bin file" << endl;
+        return;
+    }
+    int size;
+    ifs.read((char *)&size, sizeof(int));
+    vec.resize(size);
+    ifs.read((char *)&vec[0], sizeof(int) * size);
+    ifs.close();
+}
+
+
+
 // get all the file names in path and put them in a vector
 void getFiles(string path, vector<string> &files) {
     DIR *dr;

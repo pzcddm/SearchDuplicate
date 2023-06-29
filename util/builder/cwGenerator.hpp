@@ -3,28 +3,26 @@
 #include "../ds/cw.hpp"
 #include "../utils.hpp"
 
-const int  MAX_LENGTH = 2000000;
+// the max length of the segment tree (make sure it won't exceed the max length of a document * 4)
+const int MAX_LENGTH = 2000000;
 
 using namespace std;
-
-// the max length of the segment tree (make sure it won't exceed the max length of a document * 4)
-
-
 /*
     The generator of Compact windows
     Given a document and hash function, it can output the compact windows based on the divide-conquer idea using segment tree
 */
-class CwGenerator{
+class CwGenerator {
 public:
-    pair<int,int> hash_func;
+    pair<int, int> hash_func;
     vector<pair<int, int>> seg; // the segment tree
     int INTERVAL_LIMIT;
 
-    CwGenerator(int _t):INTERVAL_LIMIT(_t){
+    CwGenerator(int _t) :
+        INTERVAL_LIMIT(_t) {
         seg.resize(MAX_LENGTH);
     }
 
-    void set_hf(const pair<int,int> _hf){
+    void set_hf(const pair<int, int> _hf) {
         hash_func = _hf;
     }
 
@@ -52,8 +50,7 @@ public:
     }
 
     // get the compat windows of one document
-    void generate(const int &doc_id, const vector<int> &doc,  vector<vector<CW>> &res_cws) {
-
+    void generate(const int &doc_id, const vector<int> &doc, vector<vector<CW>> &res_cws) {
         int n = doc.size();
         if (seg.size() < 2 * n) {
             seg.resize(2 * n);
@@ -74,5 +71,4 @@ public:
 
         partition(doc_id, doc, 0, doc.size() - 1, res_cws);
     }
-
 };

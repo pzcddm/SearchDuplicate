@@ -64,10 +64,11 @@ void delete_220_token(vector<int> &vec) {
 int main(int argc, char **argv) {
     // Default parameters for config
     string source_bin_file = "../dataset_tokenizedGbt2/openwebtext_gpt2.bin";
-    string dataset = "pile";                                                  // string dataset = "openwebtext";
+    string dataset = "openwebtext";                                                  // string dataset = "pile";
     int max_k = 64;                                                           // the maximum number of hash functions
     int T = 50;                                                               // the T used in generating compact windows
-    string tokSeqFile = "../SelfGenerationText/gpt-neo-540L_50TOPK_1_3B.bin"; // "../SelfGenerationText/gpt2-medium-540L_50TOPK_400000S.bin"  "./pile_sampled_docs.bin"
+    // string tokSeqFile = "../SelfGenerationText/gpt-neo-540L_50TOPK_1_3B.bin"; // "../SelfGenerationText/gpt2-medium-540L_50TOPK_400000S.bin"  "./pile_sampled_docs.bin"
+    string tokSeqFile = "sampled_dataset/openwebtext_samples.bin";
     string parent_dir = "./index";
     bool if_attachDocIndex = false;
 
