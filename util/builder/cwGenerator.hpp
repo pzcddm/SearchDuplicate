@@ -2,6 +2,7 @@
 #include <bits/stdc++.h>
 #include "../ds/cw.hpp"
 #include "../utils.hpp"
+#include "../stopwordsFilter.hpp"
 
 // the max length of the segment tree (make sure it won't exceed the max length of a document * 4)
 const int MAX_LENGTH = 2000000;
@@ -12,6 +13,9 @@ using namespace std;
     Given a document and hash function, it can output the compact windows based on the divide-conquer idea using segment tree
 */
 class CwGenerator {
+public:
+    static StopwordsFilter filter;
+
 public:
     pair<int, int> hash_func;
     vector<pair<int, int>> seg; // the segment tree
@@ -44,6 +48,9 @@ public:
         }
 
         // assert(doc[ret.second] >= 0 && doc[ret.second] < tokenNum);
+        if(ret.first == INT_MAX)
+            return;
+        
         res_cws[doc[ret.second]].emplace_back(doc_id, l, ret.second, r);
         partition(doc_id, doc, l, ret.second - 1, res_cws);
         partition(doc_id, doc, ret.second + 1, r, res_cws);
@@ -58,7 +65,7 @@ public:
         }
 
         for (int i = 0; i < n; i++) {
-            seg[n + i].first = hval(hash_func, doc[i]);
+            seg[n + i].first = filter.filtered_hash(doc[i], hash_func);
             seg[n + i].second = i;
         }
 
@@ -72,3 +79,6 @@ public:
         partition(doc_id, doc, 0, doc.size() - 1, res_cws);
     }
 };
+
+// load stopwords
+StopwordsFilter CwGenerator::filter = StopwordsFilter();

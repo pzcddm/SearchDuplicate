@@ -111,8 +111,12 @@ public:
     void build() {
         auto start = LogTime();
 
+        // load stopwords
+        CwGenerator::filter.load_stopwords(config.stopwords_bin_path);
+        
         // generate compat windows for every document for every hash function
         printf("------------------Generating Compat Windows------------------\n");
+
         unsigned long long total_cws_amount = 0;
         const int thread_num = omp_get_max_threads();
         vector<CwGenerator> generators(thread_num, CwGenerator(config.interval_limit));

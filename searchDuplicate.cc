@@ -11,7 +11,7 @@
 #include "util/IO.hpp"
 #include "util/utils.hpp"
 #include "util/new_utils.hpp"
-
+#include "util/stopwordsFilter.hpp"
 #include "util/config/searchConfig.hpp"
 #include "util/query.hpp"
 // #include "util/queryFaster.hpp"
@@ -70,6 +70,7 @@ int main(int argc, char **argv) {
     // string tokSeqFile = "../SelfGenerationText/gpt-neo-540L_50TOPK_1_3B.bin"; // "../SelfGenerationText/gpt2-medium-540L_50TOPK_400000S.bin"  "./pile_sampled_docs.bin"
     string tokSeqFile = "sampled_dataset/openwebtext_samples.bin";
     string parent_dir = "./index";
+    string stopwords_bin_path = "./filtered_tokens.bin";
     bool if_attachDocIndex = false;
 
     // Default parameters for searching
@@ -119,6 +120,7 @@ int main(int argc, char **argv) {
     }
 
     map<int, int> mp;
+    StopwordsFilter token_filter(stopwords_bin_path);
 
     for (int i = 0; i < config.sample_texts_num; i++) {
         auto &raw_seq = tokenizedSeqs[i + sample_start];
@@ -132,12 +134,13 @@ int main(int argc, char **argv) {
         cout << "New Sequence length: " << raw_seq.size() << endl;
         config.display_curInfo();
         config.current_textNo++;
-
+        
         for (int j = 0; j + slideWin_len <= raw_seq.size(); j += slideWin_len) {
             system("keep-job 48");
             config.total_query_amount++;
             vector<int> seq;
             seq.assign(raw_seq.begin() + j, raw_seq.begin() + slideWin_len + j);
+            token_filter.filter_erase(seq); // filter stopwords
             double query_time;
             unsigned int cwNum = 0;
             Query query(seq, config.theta, config.using_k, config.cw_dirPath, config.prefix_ratio);

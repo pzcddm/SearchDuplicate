@@ -16,5 +16,5 @@ int main() {
 
     // Start building index
     IndexBuilder index_builder(build_config);
-    index_builder.build();
+    index_builder.build();  
 }

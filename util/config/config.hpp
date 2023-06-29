@@ -13,6 +13,8 @@ public:
 
     // the config of dataset
     string dataset_name = "openwebtext";
+    string stopwords_bin_path = "filtered_tokens.bin";
+    
     int doc_limit = 8013769; // the amount of docs number
 
     // the config of bpe encoding way
