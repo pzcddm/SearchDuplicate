@@ -2,12 +2,12 @@
 #include <bits/stdc++.h>
 #include <omp.h>
 
-#include "../config/buildConfig.hpp"
 #include "../IO.hpp"
+#include "../config/buildConfig.hpp"
 #include "../new_utils.hpp"
 #include "../utils.hpp"
 #include "../ds/cw.hpp"
-#include "../ds/indexItem.hpp"
+#include "../ds/bigIndexItem.hpp"
 #include "cwGenerator.hpp"
 using namespace std;
 
@@ -15,7 +15,7 @@ class IndexBuilder {
 public:
     BuildConfig config;
     vector<pair<int, int>> hf;  // hash functions
-    IndexItem **indexArr;       // Index Item
+    BigIndexItem **indexArr;       // Index Item
     vector<vector<int>> docs;   // the content of documents
     vector<vector<CW>> res_cws; // generated compact windows
     double writingDiskCost = 0; // time cost of writing files
@@ -99,12 +99,13 @@ private:
         ofstream outFile(config.index_filePath, ios::out | ios::binary);
         for (int i = 0; i < config.k; i++) {
             for (int j = 0; j < config.token_num; j++) {
-                outFile.write((char *)&indexArr[i][j], sizeof(IndexItem));
+                outFile.write((char *)&indexArr[i][j], sizeof(BigIndexItem));
             }
         }
         outFile.close();
         printf("------------------Index File Writed------------------\n");
     }
+
 
 public:
     // build the index
@@ -156,6 +157,8 @@ public:
         // write index
         write_index();
 
+        // check the stopwords should not generate any compact windows
+        CwGenerator::filter.check_stopwords_index(indexArr, config);
         double total_time_cost = RepTime(start);
         cout << "total compat window amount: " << total_cws_amount << endl;
         printf("------------------Compat Windows Generated------------------\n");
@@ -175,9 +178,9 @@ public:
         for (auto seed = 1; seed <= config.k; seed++) generateHashFunc(seed, hf);
 
         // Allocate the memory for the index array
-        indexArr = new IndexItem *[config.k];
+        indexArr = new BigIndexItem *[config.k];
         for (int i = 0; i < config.k; i++) {
-            indexArr[i] = new IndexItem[config.token_num];
+            indexArr[i] = new BigIndexItem[config.token_num];
         }
 
         // Load the dataset/texts

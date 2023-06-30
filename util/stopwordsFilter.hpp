@@ -58,4 +58,15 @@ public:
             return hval(hf, element);
         }
     }
+
+    // check if all the indexes of stopwords don't have any compactwindows
+    bool check_stopwords_index(BigIndexItem **indexArr, const Config & config){
+        for(int i = 0; i<config.k;i++){
+            for(auto const & stop_word : stopwords){
+                if(indexArr[i][stop_word].windowsNum > 0)
+                    return false;
+            }
+        }
+        return true;
+    }
 };

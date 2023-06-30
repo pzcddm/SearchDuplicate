@@ -4,9 +4,11 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+
 #include "ds/indexItem.hpp"
 #include "ds/docIndex.hpp"
 #include "ds/bigIndexItem.hpp"
+
 using namespace std;
 
 // load docIndexs into docIndexArr from the given file 
