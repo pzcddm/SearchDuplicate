@@ -2,6 +2,7 @@
 #include <bits/stdc++.h>
 #include "IO.hpp"
 #include "utils.hpp"
+#include "config/config.hpp"
 using namespace std;
 
 /*

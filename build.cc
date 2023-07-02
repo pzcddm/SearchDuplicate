@@ -2,6 +2,10 @@
 #include "util/builder/builder.hpp"
 using namespace std;
 
+/*
+    This code is for building the index of compact windows
+    Attention: It only is used for dataset that size is lower than your memory
+*/
 int main() {
     string index_dir = "./index";
     string dataset_name = "openwebtext";

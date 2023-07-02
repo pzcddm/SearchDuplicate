@@ -6,9 +6,11 @@
 #include "util/IO.hpp"
 #include "util/ds/cw.hpp"
 #include "util/ds/indexItem.hpp"
+#include "util/stopwordsFilter.hpp"
 
 int INTERVAL_LIMIT;
 int tokenNum;
+StopwordsFilter filter;
 
 #define MAX_LENGTH 2000000
 
@@ -30,7 +32,10 @@ void partition(const int &doc_id, const vector<int> &doc, const vector<pair<int,
                 ret = seg[b];
     }
 
-    assert(doc[ret.second] >= 0 && doc[ret.second] < tokenNum);
+    // assert(doc[ret.second] >= 0 && doc[ret.second] < tokenNum);
+    if(ret.first == INT_MAX)
+            return;
+
     res_cws[doc[ret.second]].emplace_back(doc_id, l, ret.second, r);
     partition(doc_id, doc, seg, l, ret.second - 1, res_cws);
     partition(doc_id, doc, seg, ret.second + 1, r, res_cws);
@@ -50,7 +55,7 @@ void generateCompatWindow(const int &doc_id, const vector<int> &doc, vector<pair
     }
 
     for (int i = 0; i < n; i++) {
-        seg[n + i].first = hval(hf, doc[i], ith_hf);
+        seg[n + i].first = filter.filtered_hash(doc[i], hf[ith_hf]);
         seg[n + i].second = i;
     }
 
@@ -102,8 +107,9 @@ void createSonDir(const string &root_path, string &cw_dir, string &index_dir, st
 // Todo: Build Index to memory
 int main(int argc, char **argv) {
     // string scr_dir = "../openwebtext_64K_vocal/";
-    string src_file = "../dataset_tokenizedGbt2/pile_gpt2.bin";
-    // string dataset_name = "pile";
+    string src_file = "../dataset_tokenizedGbt2/tokenized_bin/pile_gpt2.bin";
+    string stopwords_bin_path = "filtered_tokens.bin";
+    filter.load_stopwords(stopwords_bin_path);
     // string src_file = "../dataset_tokenizedGbt2/openwebtext_gpt2.bin";
     string dataset_name = "pile";
     string parent_dir ="./index";
@@ -311,7 +317,7 @@ int main(int argc, char **argv) {
             
             epochs++;
 
-            // system("keep-job 48");
+            system("keep-job 48");
 
             // clear docs 
             docs.clear();
