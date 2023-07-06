@@ -128,7 +128,7 @@ int main(int argc, char **argv) {
 
         if(i+sample_start >= tokenizedSeqs.size())  break;
 
-        auto &raw_seq = tokenizedSeqs[i + sample_start];
+        auto &raw_seq = tokenizedSeqs[i + config.sample_start];
         delete_220_token(raw_seq);
         // make sure the sequence length is long enough
         if (raw_seq.size() < config.slideWin_len) {
