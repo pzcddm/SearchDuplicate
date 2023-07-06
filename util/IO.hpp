@@ -124,6 +124,7 @@ void loadBin(const string &binFileName, vector<vector<int>> &docs) {
         ifs.read((char *)&vec[0], sizeof(int) * size);
         docs.emplace_back(vec);
     }
+    printf("Binary File %s Read, whose has %d texts\n", binFileName.c_str(), size);
     ifs.close();
 }
 
@@ -140,8 +141,6 @@ void loadBin(const string &binFileName, vector<int> &vec) {
     ifs.read((char *)&vec[0], sizeof(int) * size);
     ifs.close();
 }
-
-
 
 // get all the file names in path and put them in a vector
 void getFiles(string path, vector<string> &files) {

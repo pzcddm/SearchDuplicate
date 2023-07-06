@@ -144,7 +144,7 @@ private:
             prefilter_cws_amount += cw_vet.size();
             getCwsCost += RepTime(timerOn);
 
-            cout<<prefilter_cws_amount<<endl;
+            // cout<<prefilter_cws_amount<<endl;
             // cout << "cws length " << cw_vet.size() << endl;
 
             if(prefilter_cws_amount > MAX_CWS_AMOUNT){
@@ -170,10 +170,10 @@ private:
         }
 
         IO_time += getCwsCost;
-        cout << "prefilter_cws_amount: " << prefilter_cws_amount << endl;
+        // cout << "prefilter_cws_amount: " << prefilter_cws_amount << endl;
         cout << "Get Cw cost time: " << getCwsCost << endl;
         cout << "Prefilter load cw Got Cost: " << RepTime(timerOn) << endl;
-        cout << "Current Groups amount: " << groups.size() << endl;
+        // cout << "Current Groups amount: " << groups.size() << endl;
         timerOn = LogTime();
 
         // get candidate texts

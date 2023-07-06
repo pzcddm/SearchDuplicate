@@ -64,18 +64,20 @@ void delete_220_token(vector<int> &vec) {
 int main(int argc, char **argv) {
     // Default parameters for config
     string source_bin_file = "../dataset_tokenizedGbt2/openwebtext_gpt2.bin";
-    string dataset = "openwebtext";                                                  // string dataset = "pile";
+    string dataset = "c4";                                                    // string dataset = "pile";
     int max_k = 64;                                                           // the maximum number of hash functions
     int T = 50;                                                               // the T used in generating compact windows
     // string tokSeqFile = "../SelfGenerationText/gpt-neo-540L_50TOPK_1_3B.bin"; // "../SelfGenerationText/gpt2-medium-540L_50TOPK_400000S.bin"  "./pile_sampled_docs.bin"
-    string tokSeqFile = "sampled_dataset/openwebtext_samples.bin";
+    // string tokSeqFile = "sampled_dataset/openwebtext_samples.bin";
+
+    string tokSeqFile = "../ChatGptInvestigation/WebScraping_ShareGpt/tokenized_answers/1st_english_answers.bin";
     string parent_dir = "./index";
     string stopwords_bin_path = "./filtered_tokens.bin";
     bool if_attachDocIndex = false;
 
     // Default parameters for searching
     int slideWin_len = 64; // or 128 or 32
-    int sample_sequence_num = 1000;
+    int sample_sequence_num = 5000;
     int sample_start = 0;
     bool if_showPassage = false;
     double prefix_ratio = 0.4; // control prefix length
@@ -91,9 +93,9 @@ int main(int argc, char **argv) {
     docNum = config.doc_limit; // the amount of texts in the dataset 210607728 8013769
 
     // load document index
-    string doc_index_file = "./doc_index/openwebtext_gpt2_docIndex.bin";
+    // string doc_index_file = "./doc_index/openwebtext_gpt2_docIndex.bin";
     vector<unsigned long long> doc_index;
-    readDocInex(doc_index, doc_index_file);
+    // readDocInex(doc_index, doc_index_file);
 
     // show current parameters of config
     config.display_parameters();
@@ -123,6 +125,9 @@ int main(int argc, char **argv) {
     StopwordsFilter token_filter(stopwords_bin_path);
 
     for (int i = 0; i < config.sample_texts_num; i++) {
+
+        if(i+sample_start >= tokenizedSeqs.size())  break;
+
         auto &raw_seq = tokenizedSeqs[i + sample_start];
         delete_220_token(raw_seq);
         // make sure the sequence length is long enough
@@ -134,9 +139,10 @@ int main(int argc, char **argv) {
         cout << "New Sequence length: " << raw_seq.size() << endl;
         config.display_curInfo();
         config.current_textNo++;
-        
-        for (int j = 0; j + slideWin_len <= raw_seq.size(); j += slideWin_len) {
+        if(config.if_in_ilab == true)
             system("keep-job 48");
+
+        for (int j = 0; j + slideWin_len <= raw_seq.size(); j += slideWin_len) {
             config.total_query_amount++;
             vector<int> seq;
             seq.assign(raw_seq.begin() + j, raw_seq.begin() + slideWin_len + j);

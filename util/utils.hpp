@@ -1,6 +1,7 @@
 #pragma once
 
 #include <bits/stdc++.h>
+#include <unistd.h>
 
 using namespace std;
 int K = 16;
@@ -182,4 +183,28 @@ void printVec(const vector<T> &vec) {
         cout << tmp << ",";
     }
     cout << endl;
+}
+
+// Function to check if the machine's hostname contains the substring "ilab"
+bool checkHostnameContainsIlab() {
+    // Define a char array to store the hostname
+    char hostname[1024];
+
+    // Get the hostname and store it in the 'hostname' array
+    gethostname(hostname, 1024);
+
+    // Convert the char array to a std::string to make use of std::string methods
+    std::string hostnameStr(hostname);
+
+    // Check if the hostname string contains "ilab". std::string::find returns the 
+    // position of the first occurrence of the substring in the string. If it does 
+    // not find the substring, it returns std::string::npos.
+    if (hostnameStr.find("ilab") != std::string::npos) {
+        // The hostname contains "ilab", so return true
+        return true;
+    }
+    else {
+        // The hostname does not contain "ilab", so return false
+        return false;
+    }
 }

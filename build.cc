@@ -8,7 +8,7 @@ using namespace std;
 */
 int main() {
     string index_dir = "./index";
-    string dataset_name = "openwebtext";
+    string dataset_name = "c4";  // openwebtext
     const int k = 64;                 // the number of hash functions
     const int t = 50;                 // set the interval limit for generating compat windows
     const int zonemp_interval = 5000; // the stride that decreasing when generating zonemap

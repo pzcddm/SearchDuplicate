@@ -1,4 +1,5 @@
 #include "config.hpp"
+#include "../utils.hpp"
 
 using namespace std;
 
@@ -14,7 +15,7 @@ public:
     int sample_start = 0;       // the query no of texts in the tokSeqFile that
     double prefix_ratio = 0.4; // control prefix length
     double theta = 0.8;         // the minimun similarity threshold
-
+    bool if_in_ilab = false;    // if the current machine is ilab or not
     int max_k = 64;
     int using_k = 64;
 
@@ -51,6 +52,7 @@ public:
         Config(_max_k, _interval_limit, _dataset_name, _if_attachDocIndex), tokSeqFile(_tokSeqFile) {
         max_k = _max_k;
         using_k = max_k;
+        if_in_ilab = checkHostnameContainsIlab();
     }
 
     void setQueryConfig(int _slideWin_len, int _sample_texts_num, int _sample_st, double _prefix_ratio, double _theta){
@@ -83,6 +85,8 @@ public:
                     config_dataset(_dataset_name, 210607728);
                 else if (_dataset_name == "openwebtext")
                     config_dataset(_dataset_name, 8013769);
+                else if (_dataset_name == "c4")
+                    config_dataset(_dataset_name, 364868892);
                 else
                     perror("No given dataset\n");
             }
