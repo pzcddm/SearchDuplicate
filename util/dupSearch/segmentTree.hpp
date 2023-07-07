@@ -5,21 +5,36 @@ If there are duplicate maximums, the position is that of the rightest one.
 #pragma once
 #include <bits/stdc++.h>
 using namespace std;
-const int MAX_LEN = 100000;
+const int MAX_LEN = 400000;
 
 class SegmentTree {
     // Update nodes from bottom to top
     int size;
-    int seg_tree[MAX_LEN << 2];
-    int max_pos[MAX_LEN << 2];
-    int lazy[MAX_LEN << 2];
-    int arr[MAX_LEN];
+    int *seg_tree;
+    int *max_pos;
+    int *lazy;
+    int *arr;
 public:
+
+    SegmentTree(){
+        seg_tree = new int[MAX_LEN << 2];
+        max_pos = new int[MAX_LEN << 2];
+        lazy = new int[MAX_LEN << 2];
+        arr = new int[MAX_LEN];
+    }
+
+    ~SegmentTree(){
+        delete []seg_tree;
+        delete [] max_pos;
+        delete [] lazy;
+        delete [] arr;
+    }
+
     void clean() {
         memset(arr, 0, sizeof(int)*size);
-        memset(lazy, 0, sizeof(lazy));
-        memset(seg_tree, 0, sizeof(seg_tree));
-        memset(max_pos, 0, sizeof(max_pos));
+        memset(lazy, 0, sizeof(int)*MAX_LEN*4);
+        memset(seg_tree, 0, sizeof(int)*MAX_LEN*4);
+        memset(max_pos, 0, sizeof(int)*MAX_LEN*4);
         size = 0;
     }
     void push_up(int root) {
@@ -44,6 +59,7 @@ public:
     }
 
     void build(int root, int L, int R) {
+        if(R>=MAX_LEN) printf("Error: R is larger than MAX_LEN %d\n", R);
         assert(R < MAX_LEN);
         size = R;
         // lazy[root] = 0;

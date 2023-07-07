@@ -21,7 +21,8 @@ using namespace std;
 // global variables
 DocIndex **docIndexArr;
 BigIndexItem **indexArr;
-vector<SegmentTree> trees;
+// intiliaze thread_num segment tree for parelled near duplicate search
+vector<SegmentTree> trees(omp_get_max_threads());
 ZoneMaps zonemaps;
 vector<pair<int, int>> hashFunctions;
 
@@ -32,10 +33,6 @@ void prepareGlobalVariables(int k) {
     cout << "total token amount: " << wordNum << endl;
     // the hash functions' seeds are 1 to k (cannot use 0 and 1 both together because their hash functions are the same)
     for (int i = 1; i <= k; i++) generateHashFunc(i, hashFunctions);
-
-    // intiliaze thread_num segment tree for parelled near duplicate search
-    int thread_num = omp_get_max_threads();
-    trees.resize(thread_num);
 }
 
 int reportPassagesNum(const vector<CW> &duplicateCWs) {
@@ -140,7 +137,7 @@ int main(int argc, char **argv) {
         config.display_curInfo();
         config.current_textNo++;
         if(config.if_in_ilab == true)
-            system("keep-job 48");
+            config.if_in_ilab = system("keep-job 48");
 
         for (int j = 0; j + slideWin_len <= raw_seq.size(); j += slideWin_len) {
             config.total_query_amount++;
