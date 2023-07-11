@@ -16,4 +16,23 @@ public:
             else if (_dataset_name == "c4")
                 src_file = "/research/projects/zp128/dataset_tokenizedGbt2/tokenized_bin/c4_en_train_gpt2.bin";
     }
+
+     void parseArgv(const int &argc, char **&argv) {
+        for (int i = 0; i < argc; i++) {
+            const string arg = argv[i];
+
+            if (arg == "-doc_limit") {
+                set_docLimit(atoi(argv[i + 1]));
+            }
+
+            if (arg == "-t") {
+                set_t(atoi(argv[i + 1]));
+            }
+
+            if (arg == "-k") {
+                k = atoi(argv[i + 1]);
+            }
+        }
+    }
+
 };

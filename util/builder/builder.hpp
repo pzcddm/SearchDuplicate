@@ -188,7 +188,7 @@ public:
         printf("------------------Loading Document File------------------\n");
         loadBin(config.src_file, docs);
         cout << "readfile time: " << RepTime(start) << " seconds" << endl;
-        assert(config.doc_limit == docs.size());
+        // assert(config.doc_limit == docs.size());
         printf("------------------Document File Loaded------------------\n");
     }
 

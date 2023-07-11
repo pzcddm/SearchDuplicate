@@ -1,10 +1,10 @@
-# for doc_limit in 1000000 2000000 4000000 8000000
-# do
-# for t in 25 50 100
-# do 
-# ./buildCompatWindows -doc_limit $doc_limit -t $t -k 32 >> exp2.txt
-# done
-# done
+for doc_limit in 1000000 2000000 4000000 8000000
+do
+for t in 25 50 100
+do 
+./build -doc_limit $doc_limit -t $t >> exp_records/build_opm.txt
+done
+done
 
 # for tokenNum in 16000 32000 64000 128000
 # do
@@ -38,10 +38,10 @@
 # done
 # done
 
-for doc_limit in 26325966 52651932 105303864
-do
-for t in 25 50 100
-do 
-./mergeCw -k 1 -t $t -doc_limit $doc_limit >> ./expRecord/buildExp/merged_pile_${t}_${doc_limit}.txt
-done
-done
+# for doc_limit in 26325966 52651932 105303864
+# do
+# for t in 25 50 100
+# do 
+# ./mergeCw -k 1 -t $t -doc_limit $doc_limit >> ./expRecord/buildExp/merged_pile_${t}_${doc_limit}.txt
+# done
+# done
