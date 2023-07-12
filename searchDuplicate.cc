@@ -75,14 +75,14 @@ int main(int argc, char **argv) {
     // Default parameters for searching
     int slideWin_len = 64; // or 128 or 32
     int sample_sequence_num = 5000;
-    int sample_start = 0;
+    int sample_start = 5010;
     bool if_showPassage = false;
     double prefix_ratio = 0.4; // control prefix length
     float theta = 0.8;         // similarity threshold
 
     SearchConfig config(max_k, T, dataset, if_attachDocIndex, tokSeqFile);
     config.setQueryConfig(slideWin_len, sample_sequence_num, sample_start, prefix_ratio, theta);
-
+ 
     // parse the arguments
     config.parseArgv(argc, argv);
 
@@ -126,7 +126,7 @@ int main(int argc, char **argv) {
         if(i+sample_start >= tokenizedSeqs.size())  break;
 
         auto &raw_seq = tokenizedSeqs[i + config.sample_start];
-        delete_220_token(raw_seq);
+        token_filter.filter_erase(raw_seq); // filter stopwords
         // make sure the sequence length is long enough
         if (raw_seq.size() < config.slideWin_len) {
             cout << "Meet short seq, skip " << endl;
@@ -143,7 +143,7 @@ int main(int argc, char **argv) {
             config.total_query_amount++;
             vector<int> seq;
             seq.assign(raw_seq.begin() + j, raw_seq.begin() + slideWin_len + j);
-            token_filter.filter_erase(seq); // filter stopwords
+            
             double query_time;
             unsigned int cwNum = 0;
             Query query(seq, config.theta, config.using_k, config.cw_dirPath, config.prefix_ratio);

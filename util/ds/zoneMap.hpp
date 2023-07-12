@@ -63,7 +63,12 @@ class ZoneMaps{
                 
             assert(tokenId2index[ith_khash].count(token_id));
             const auto &zonemp = zoneMaps[ith_khash][tokenId2index[ith_khash][token_id]];
-        
+
+            // all the text_ids in the zonemap is larger than text_id,
+            // no need to search in it
+            if(zonemp.size() == 0 || zonemp[0].first > text_id)
+                return;
+            
             // find the first pair that lower and equal than (candid_text,0ULL)
             auto it = lower_bound(zonemp.begin(), zonemp.end(), make_pair(text_id, 999999ULL));
             if (it == zonemp.end()) {

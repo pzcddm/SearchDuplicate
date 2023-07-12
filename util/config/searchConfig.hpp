@@ -61,6 +61,7 @@ public:
         sample_start = _sample_st;
         prefix_ratio = _prefix_ratio;
         theta = _theta;
+        current_textNo = sample_start;
     }
 
     void setTheta(double _theta) {
